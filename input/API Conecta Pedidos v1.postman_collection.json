@@ -1,0 +1,2708 @@
+{
+	"info": {
+		"_postman_id": "6ddb59cf-cc9e-4e39-862b-ff978cae47af",
+		"name": "API Conecta Pedidos v1.6",
+		"description": "## Esta collection não usa Environment\n\n### \\## Atualizações\n\nv1.6 - Ajuste de cenarios de teste F003\n\nv1.5 - Ajuste de cenarios de teste F001 e F002\n\nv1.4 - Ajuste de cenarios de teste F003\n\nV1.3 - Adição dos testes da operação POST do webhook\n\nv1.2 - Ajuste do header e cenarios de teste.\n\nv1.1 - Ajuste das validações dos testes e criação de novos cenarios.\n\nv1 - Criação da collection.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "17621080"
+	},
+	"item": [
+		{
+			"name": "[F000] Autenticação",
+			"item": [
+				{
+					"name": "Gerar Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"\r",
+									"pm.collectionVariables.set(\"oauth\", jsonData.access_token);\r",
+									"\r",
+									"pm.test(\"O access_token não deve estar vazio\", function () {\r",
+									"    var accessToken = jsonData.access_token;\r",
+									"    pm.expect(accessToken).to.be.a('string');\r",
+									"    pm.expect(accessToken).to.not.be.empty;\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{client_secret_og}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{client_id_og}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"url": {
+							"raw": "https://api-essilor.sensedia.com/oauth/access-token?grant_type=client_credentials",
+							"protocol": "https",
+							"host": [
+								"api-essilor",
+								"sensedia",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"access-token"
+							],
+							"query": [
+								{
+									"key": "grant_type",
+									"value": "client_credentials"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const statusCode = 201;",
+							"pm.test(\"Status code is \" + statusCode, function () {",
+							"    pm.response.to.have.status(statusCode);",
+							"});"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "[F001] GET /pedidos",
+			"item": [
+				{
+					"name": "Sucesso [200,206]",
+					"item": [
+						{
+							"name": "[200] GET /pedidos Sucesso - sem params - retorna pedidos data=hoje",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "client_id",
+										"value": "{{client_id_og}}",
+										"type": "text"
+									},
+									{
+										"key": "access_token",
+										"value": "{{oauth}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"{{enviroment}}",
+										"{{api}}",
+										"{{version}}",
+										"pedidos"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "[200] GET /pedidos Sucesso - data inicio e fim",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "client_id",
+										"value": "{{client_id_og}}",
+										"type": "text"
+									},
+									{
+										"key": "access_token",
+										"value": "{{oauth}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?dataInicio=2025-09-01&dataFim=2025-09-19",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"{{enviroment}}",
+										"{{api}}",
+										"{{version}}",
+										"pedidos"
+									],
+									"query": [
+										{
+											"key": "dataInicio",
+											"value": "2025-09-01"
+										},
+										{
+											"key": "dataFim",
+											"value": "2025-09-19"
+										},
+										{
+											"key": "integradoLab",
+											"value": "true",
+											"disabled": true
+										},
+										{
+											"key": "laboratorio",
+											"value": "04693846000105",
+											"disabled": true
+										},
+										{
+											"key": "laboratorio",
+											"value": "27175413000163",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "[200] GET /pedidos Sucesso - integradoLab = false",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "client_id",
+										"value": "{{client_id_og}}",
+										"type": "text"
+									},
+									{
+										"key": "access_token",
+										"value": "{{oauth}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?integradoLab=false",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"{{enviroment}}",
+										"{{api}}",
+										"{{version}}",
+										"pedidos"
+									],
+									"query": [
+										{
+											"key": "dataInicio",
+											"value": "2025-09-01",
+											"disabled": true
+										},
+										{
+											"key": "dataFim",
+											"value": "2025-09-18",
+											"disabled": true
+										},
+										{
+											"key": "integradoLab",
+											"value": "false"
+										},
+										{
+											"key": "laboratorio",
+											"value": "04693846000105",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "[200] GET /pedidos Sucesso - laboratorio = lab do App",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "client_id",
+										"value": "{{client_id_og}}",
+										"type": "text"
+									},
+									{
+										"key": "access_token",
+										"value": "{{oauth}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?laboratorio=04693846000105",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"{{enviroment}}",
+										"{{api}}",
+										"{{version}}",
+										"pedidos"
+									],
+									"query": [
+										{
+											"key": "dataInicio",
+											"value": "2025-09-01",
+											"disabled": true
+										},
+										{
+											"key": "dataFim",
+											"value": "2025-09-18",
+											"disabled": true
+										},
+										{
+											"key": "integradoLab",
+											"value": "true",
+											"disabled": true
+										},
+										{
+											"key": "laboratorio",
+											"value": "04693846000105"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "[200] GET /pedidos Sucesso - cliente = CNPJ Otica",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "client_id",
+										"value": "{{client_id_og}}",
+										"type": "text"
+									},
+									{
+										"key": "access_token",
+										"value": "{{oauth}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?cliente=18070598000150",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"{{enviroment}}",
+										"{{api}}",
+										"{{version}}",
+										"pedidos"
+									],
+									"query": [
+										{
+											"key": "dataInicio",
+											"value": "2025-09-01",
+											"disabled": true
+										},
+										{
+											"key": "dataFim",
+											"value": "2025-09-18",
+											"disabled": true
+										},
+										{
+											"key": "integradoLab",
+											"value": "true",
+											"disabled": true
+										},
+										{
+											"key": "laboratorio",
+											"value": "04693846000105",
+											"disabled": true
+										},
+										{
+											"key": "cliente",
+											"value": "18070598000150"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"requests": {},
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"requests": {},
+								"exec": [
+									"// --- Definição do schema de validação\r",
+									"const jsonSchema = {\r",
+									"    \"type\": \"object\",\r",
+									"    \"properties\": {\r",
+									"        \"pedidos\": {\r",
+									"            \"type\": \"array\",\r",
+									"            \"items\": {\r",
+									"                \"type\": \"object\",\r",
+									"                \"properties\": {\r",
+									"                    \"id\": { \"type\": \"string\", \"format\": \"uuid\",\"minLength\": 1 },\r",
+									"                    \"dataCriacao\": { \"type\": \"string\", \"minLength\": 1,\r",
+									"                        \"anyOf\": [\r",
+									"                            { \"format\": \"date-time\" },\r",
+									"                            { \"pattern\": \"^(([0-9]{4})(-)(((0)[0-9])|((1)[0-2]))(-)([0-2][0-9]|(3)[0-1])(T)([0-1][0-9]|(2)[0-3])(:)([0-5][0-9])(:)([0-5][0-9])?((.)+))$\" }\r",
+									"                        ] },\r",
+									"                    \"integradoLab\": { \"type\": \"boolean\",\"minLength\": 1 },\r",
+									"                    \"laboratorio\": { \"type\": \"string\",\"minLength\": 1 },\r",
+									"                    \"otica\": { \"type\": \"string\",\"minLength\": 1 }\r",
+									"                },\r",
+									"                \"required\": [\"id\", \"dataCriacao\", \"integradoLab\", \"laboratorio\", \"otica\"]\r",
+									"            }\r",
+									"        }\r",
+									"    },\r",
+									"    \"required\": [\"pedidos\"]\r",
+									"};\r",
+									"\r",
+									"pm.test(\"Status code is one of 200, 206 = \" + pm.response.code, function () {\r",
+									"    pm.expect(pm.response.code).to.be.oneOf([200,206]);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"JSON Schema is valid\", function () {\r",
+									"    pm.response.to.have.jsonSchema(jsonSchema);\r",
+									"});\r",
+									"\r",
+									"\r",
+									"// --- Contagem de itens e salvamento de ID aleatório\r",
+									"const jsonData = pm.response.json();\r",
+									"\r",
+									"pm.test(\"Calcula a quantidade de itens e salva um ID aleatório\", function () {\r",
+									"    const pedidos = jsonData.pedidos;\r",
+									"    const totalItens = pedidos.length;\r",
+									"\r",
+									"    // console.log(`Total de itens encontrados: ${totalItens}`);\r",
+									"    pm.expect(totalItens, \"O array 'pedidos' deve conter itens\").to.be.above(0);\r",
+									"\r",
+									"    pm.test(\"O array 'pedidos' contem \" + totalItens + \" itens\", function () {\r",
+									"        pm.expect(totalItens).to.be.above(0);\r",
+									"    });\r",
+									"\r",
+									"    if (totalItens > 0) {\r",
+									"        const randomIndex = Math.floor(Math.random() * totalItens);\r",
+									"        const randomId = pedidos[randomIndex].id;\r",
+									"\r",
+									"        // Salva o ID em uma variável de ambiente\r",
+									"        pm.collectionVariables.set(\"random_id_pedido\", randomId);\r",
+									"        // console.log(`ID de pedido aleatório salvo: ${randomId}`);\r",
+									"        \r",
+									"        pm.test(\"Id Pedido salvo \" + randomId + \"  - não é nulo\", function () {\r",
+									"            pm.expect(randomId).to.not.be.null;\r",
+									"        });\r",
+									"    }\r",
+									"});\r",
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Sucesso (200) - body vazio",
+					"item": [
+						{
+							"name": "[200] GET /pedidos Sucesso - integradoLab = true",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "client_id",
+										"value": "{{client_id_og}}",
+										"type": "text"
+									},
+									{
+										"key": "access_token",
+										"value": "{{oauth}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?dataInicio=2025-10-03&dataFim=2025-10-03&integradoLab=true",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"{{enviroment}}",
+										"{{api}}",
+										"{{version}}",
+										"pedidos"
+									],
+									"query": [
+										{
+											"key": "dataInicio",
+											"value": "2025-10-03"
+										},
+										{
+											"key": "dataFim",
+											"value": "2025-10-03"
+										},
+										{
+											"key": "integradoLab",
+											"value": "true"
+										},
+										{
+											"key": "laboratorio",
+											"value": "04693846000105",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "[200] GET /pedidos Sucesso - cliente = CNPJ invalido",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "client_id",
+										"value": "{{client_id_og}}",
+										"type": "text"
+									},
+									{
+										"key": "access_token",
+										"value": "{{oauth}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?cliente=123456",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"{{enviroment}}",
+										"{{api}}",
+										"{{version}}",
+										"pedidos"
+									],
+									"query": [
+										{
+											"key": "dataInicio",
+											"value": "2025-09-01",
+											"disabled": true
+										},
+										{
+											"key": "dataFim",
+											"value": "2025-09-18",
+											"disabled": true
+										},
+										{
+											"key": "integradoLab",
+											"value": "true",
+											"disabled": true
+										},
+										{
+											"key": "laboratorio",
+											"value": "04693846000105",
+											"disabled": true
+										},
+										{
+											"key": "cliente",
+											"value": "123456"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"description": "quando nenhum pedido for encontrado com os parametros enviados, a resposta deve ser status 200 com body vazio",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"requests": {},
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"requests": {},
+								"exec": [
+									"\r",
+									"const statusCode = 200;\r",
+									"pm.test(\"Status code is \" + statusCode, function () {\r",
+									"    pm.response.to.have.status(statusCode);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Body do response está vazio\", function () {\r",
+									"    var data = JSON.parse(pm.response.text());\r",
+									"    pm.expect(data.pedidos).to.be.empty;\r",
+									"    pm.expect(data.pedidos).to.have.lengthOf(0);\r",
+									"});\r",
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Erros",
+					"item": [
+						{
+							"name": "400",
+							"item": [
+								{
+									"name": "[400] GET /pedidos Intervalo de datas invalido",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"400\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"A 'dataInicio' deve ser menor ou igual à 'dataFim'\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_og}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?dataInicio=2025-09-22&dataFim=2025-09-18",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos"
+											],
+											"query": [
+												{
+													"key": "dataInicio",
+													"value": "2025-09-22"
+												},
+												{
+													"key": "dataFim",
+													"value": "2025-09-18"
+												},
+												{
+													"key": "integradoLab",
+													"value": "true",
+													"disabled": true
+												},
+												{
+													"key": "laboratorio",
+													"value": "04693846000105",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "[400] GET /pedidos Apenas dataInicio",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"400\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"Ao filtrar por data, é obrigatório o envio de ambas as datas ('dataInicio' e 'dataFim')\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_og}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?dataInicio=2025-09-22",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos"
+											],
+											"query": [
+												{
+													"key": "dataInicio",
+													"value": "2025-09-22"
+												},
+												{
+													"key": "dataFim",
+													"value": "2025-09-18",
+													"disabled": true
+												},
+												{
+													"key": "integradoLab",
+													"value": "true",
+													"disabled": true
+												},
+												{
+													"key": "laboratorio",
+													"value": "04693846000105",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "[400] GET /pedidos Apenas dataFim",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"400\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"Ao filtrar por data, é obrigatório o envio de ambas as datas ('dataInicio' e 'dataFim')\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_og}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?dataFim=2025-09-18",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos"
+											],
+											"query": [
+												{
+													"key": "dataInicio",
+													"value": "2025-09-22",
+													"disabled": true
+												},
+												{
+													"key": "dataFim",
+													"value": "2025-09-18"
+												},
+												{
+													"key": "integradoLab",
+													"value": "true",
+													"disabled": true
+												},
+												{
+													"key": "laboratorio",
+													"value": "04693846000105",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"requests": {},
+										"exec": [
+											"const statusCode = 400;",
+											"pm.test(\"Status code is \" + statusCode, function () {",
+											"    pm.response.to.have.status(statusCode);",
+											"});",
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "401",
+							"item": [
+								{
+									"name": "[401] GET /pedidos Access Token inválido",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"401\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"Access_token inválido.\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_og}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{token_invalido}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "[401] GET /pedidos App inválido",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"401\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"App inválido.\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_invalido}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos"
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											"const statusCode = 401;",
+											"pm.test(\"Status code is \" + statusCode, function () {",
+											"    pm.response.to.have.status(statusCode);",
+											"});",
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "403",
+							"item": [
+								{
+									"name": "[403] GET /pedidos Sucesso - laboratorio <> lab do app",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"403\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"App sem permissão ao laboratório.\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_og}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?dataInicio=2025-09-01&laboratorio=27175413000163",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos"
+											],
+											"query": [
+												{
+													"key": "dataInicio",
+													"value": "2025-09-01"
+												},
+												{
+													"key": "laboratorio",
+													"value": "27175413000163"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											"const statusCode = 403;",
+											"pm.test(\"Status code is \" + statusCode, function () {",
+											"    pm.response.to.have.status(statusCode);",
+											"});",
+											""
+										]
+									}
+								}
+							]
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"requests": {},
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"requests": {},
+								"exec": [
+									"const jsonSchema = {\r",
+									"  \"type\": \"object\",\r",
+									"  \"properties\": {\r",
+									"    \"erros\": {\r",
+									"      \"type\": \"array\",\r",
+									"      \"items\": {\r",
+									"        \"type\": \"object\",\r",
+									"        \"properties\": {\r",
+									"          \"codigo\": { \"type\": \"string\",\"minLength\": 3 },\r",
+									"          \"mensagem\": { \"type\": \"string\",\"minLength\": 10 }\r",
+									"        },\r",
+									"        \"required\": [\"codigo\",\"mensagem\"]\r",
+									"      }\r",
+									"    },\r",
+									"    \"traceId\": { \"type\": \"string\",\"format\": \"uuid\",\"minLength\": 36 }\r",
+									"  },\r",
+									"  \"required\": [\"erros\", \"traceId\"]\r",
+									"};\r",
+									"\r",
+									"\r",
+									"pm.test(\"JSON Schema is valid\", function () {\r",
+									"    pm.response.to.have.jsonSchema(jsonSchema);\r",
+									"});\r",
+									"\r",
+									"var jsonData = pm.response.json();\r",
+									"var traceId = jsonData.traceId;\r",
+									"pm.test(\"Mensagem de erro possui o campo 'traceId' = \" + traceId, function () {\r",
+									"    pm.expect(jsonData.traceId).to.not.be.empty;\r",
+									"});\r",
+									""
+								]
+							}
+						}
+					]
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "[F002] GET /pedidos/{id}",
+			"item": [
+				{
+					"name": "Sucesso (200)",
+					"item": [
+						{
+							"name": "[200] GET /pedidos/{id} Sucesso",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "client_id",
+										"value": "{{client_id_og}}",
+										"type": "text"
+									},
+									{
+										"key": "access_token",
+										"value": "{{oauth}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/{{random_id_pedido}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"{{enviroment}}",
+										"{{api}}",
+										"{{version}}",
+										"pedidos",
+										"{{random_id_pedido}}"
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"requests": {},
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"requests": {},
+								"exec": [
+									"\r",
+									"const jsonSchema = {\r",
+									"  type: \"object\",\r",
+									"  required: [\"idPedidoOtica\", \"receita\", \"armacao\", \"orcamento\"],\r",
+									"  properties: {\r",
+									"    id: { type: \"string\", minLength: 1 },\r",
+									"    idPedidoOtica: { type: \"string\", minLength: 1 },\r",
+									"    observacao: { type: \"string\" },\r",
+									"    servicos: {\r",
+									"      type: \"array\",\r",
+									"      items: {\r",
+									"        type: \"object\",\r",
+									"        required: [\"codigoRef\", \"descricao\", \"tipo\"],\r",
+									"        properties: {\r",
+									"          codigo: { type: \"string\", minLength: 1 },\r",
+									"          descricao: { type: \"string\", minLength: 1 },\r",
+									"          tipo: { type: \"string\", minLength: 1 },\r",
+									"          codigoRef:  { type: \"string\", minLength: 1 },\r",
+									"        },\r",
+									"      },\r",
+									"    },\r",
+									"    corColoracao: {\r",
+									"      type: \"object\",\r",
+									"      properties: {\r",
+									"        codigo: { type: \"string\" },\r",
+									"        descricao: { type: \"string\" },\r",
+									"        codigoRef: { type: [\"string\", \"null\"] }\r",
+									"      },\r",
+									"    },\r",
+									"    receita: {\r",
+									"      type: \"object\",\r",
+									"      properties: {\r",
+									"        olhoDireito: {\r",
+									"          type: \"object\",\r",
+									"          required: [\"grauEsferico\", \"dnp\", \"rpl\"],\r",
+									"          properties: {\r",
+									"            grauEsferico: { type: \"string\", minLength: 1 },\r",
+									"            grauCilindro: { type: \"string\" },\r",
+									"            eixo: { type: \"string\" },\r",
+									"            adicao: { type: \"string\" },\r",
+									"            dnp: { type: \"string\", minLength: 1 },\r",
+									"            altura: { type: \"string\" },\r",
+									"            codigoLinhaProduto: { type: \"string\"},\r",
+									"            rpl: { type: \"string\", minLength: 1 },\r",
+									"            eixoPrismaHorizontal: { type: \"string\" },\r",
+									"            valorPrismaHorizontal: { type: \"string\" },\r",
+									"            eixoPrismaVertical: { type: \"string\" },\r",
+									"            valorPrismaVertical: { type: \"string\" },\r",
+									"            base: { type: \"string\" },\r",
+									"            et: { type: \"string\" },\r",
+									"            ct: { type: \"string\" },\r",
+									"          },\r",
+									"        },\r",
+									"        olhoEsquerdo: {\r",
+									"          type: \"object\",\r",
+									"          required: [\"grauEsferico\", \"dnp\", \"rpl\"],\r",
+									"          properties: {\r",
+									"            grauEsferico: { type: \"string\", minLength: 1 },\r",
+									"            grauCilindro: { type: \"string\" },\r",
+									"            eixo: { type: \"string\" },\r",
+									"            adicao: { type: \"string\" },\r",
+									"            dnp: { type: \"string\", minLength: 1 },\r",
+									"            altura: { type: \"string\", minLength: 1 },\r",
+									"            codigoLinhaProduto: { type: \"string\" },\r",
+									"            rpl: { type: \"string\", minLength: 1 },\r",
+									"            eixoPrismaHorizontal: { type: \"string\" },\r",
+									"            valorPrismaHorizontal: { type: \"string\" },\r",
+									"            eixoPrismaVertical: { type: \"string\" },\r",
+									"            valorPrismaVertical: { type: \"string\" },\r",
+									"            base: { type: \"string\" },\r",
+									"            et: { type: \"string\" },\r",
+									"            ct: { type: \"string\" },\r",
+									"          },\r",
+									"        },\r",
+									"      },\r",
+									"    },\r",
+									"    armacao: {\r",
+									"      type: \"object\",\r",
+									"      required: [\"vertical\", \"horizontal\", \"ponte\", \"diametroMaior\"],\r",
+									"      properties: {\r",
+									"        vertical: { type: \"string\", minLength: 1 },\r",
+									"        horizontal: { type: \"string\", minLength: 1 },\r",
+									"        ponte: { type: \"string\", minLength: 1 },\r",
+									"        diametroMaior: { type: \"string\", minLength: 1 },\r",
+									"        tipo: { type: \"string\", minLength: 1 },\r",
+									"        tipoCodigoRef: { type: \"string\", minLength: 1 },\r",
+									"        modelo: { type: \"string\" },\r",
+									"        modeloCodigoRef: { type: \"string\" },\r",
+									"        cor: {\r",
+									"          type: \"object\",\r",
+									"          required: [\"codigo\",\"descricao\"],\r",
+									"          properties: {\r",
+									"            codigo: { type: \"string\" },\r",
+									"            descricao: { type: \"string\" }\r",
+									"          }\r",
+									"        },\r",
+									"        marca: { type: \"string\" },\r",
+									"        referencia: { type: \"string\" },\r",
+									"        leitura: { type: \"string\" },\r",
+									"      },\r",
+									"    },\r",
+									"    parametros: {\r",
+									"      type: \"object\",\r",
+									"      properties: {\r",
+									"        olhoDireito: {\r",
+									"          type: \"object\",\r",
+									"          properties: {\r",
+									"            dnpPerto: { type: \"string\" },\r",
+									"            distanciaVertice: { type: \"string\" },\r",
+									"            cro: { type: \"string\" },\r",
+									"            anguloPantoscopico: { type: \"string\" },\r",
+									"            anguloCurvatura: { type: \"string\" },\r",
+									"            distanciaLeitura:{ type: \"string\" },\r",
+									"            coeficienteHE:{ type: \"string\" },\r",
+									"            coeficienteST: { type: \"string\" },\r",
+									"            distanciaProgressao: { type: \"string\" },\r",
+									"            cvp: { type: \"string\" },\r",
+									"            vmap: { type: \"string\" },\r",
+									"          },\r",
+									"        },\r",
+									"        olhoEsquerdo: {\r",
+									"          type: \"object\",\r",
+									"          properties: {\r",
+									"            dnpPerto: { type: \"string\" },\r",
+									"            distanciaVertice: { type: \"string\" },\r",
+									"            cro: { type: \"string\" },\r",
+									"            anguloPantoscopico: { type: \"string\" },\r",
+									"            anguloCurvatura: { type: \"string\" },\r",
+									"            distanciaLeitura: { type: \"string\" },\r",
+									"            coeficienteHE: { type: \"string\" },\r",
+									"            coeficienteST: { type: \"string\" },\r",
+									"            distanciaProgressao: { type: \"string\" },\r",
+									"            cvp: { type: \"string\" },\r",
+									"            vmap: { type: \"string\" },\r",
+									"          },\r",
+									"        },\r",
+									"        olhoDominante: { type: \"string\" },\r",
+									"      },\r",
+									"    },\r",
+									"    paciente: {\r",
+									"      type: \"object\",\r",
+									"      properties: {\r",
+									"        nome: { type: \"string\" },\r",
+									"        cpf: { type: \"string\" },\r",
+									"        iniciaisPaciente: { type: \"string\" },\r",
+									"      },\r",
+									"    },\r",
+									"    medido: {\r",
+									"      type: \"object\",\r",
+									"      properties: {\r",
+									"        nome: { type: \"string\" },\r",
+									"        crm: { type: \"string\" }\r",
+									"      }\r",
+									"    },\r",
+									"    vendedor: {\r",
+									"      type: \"object\",\r",
+									"      properties: {\r",
+									"        nome: { type: \"string\" },\r",
+									"        cpf: { type: \"string\" }\r",
+									"      }\r",
+									"    },\r",
+									"    orcamento: {\r",
+									"      type: \"object\"\r",
+									"    }\r",
+									"  }\r",
+									"};\r",
+									"\r",
+									"\r",
+									"// ..................................\r",
+									"const statusCode = 200;\r",
+									"pm.test(\"Status code is \" + statusCode, function () {\r",
+									"    pm.response.to.have.status(statusCode);\r",
+									"});\r",
+									"\r",
+									"const jsonResponse = pm.response.json();\r",
+									"pm.test(\"JSON Schema is valid\", function () {\r",
+									"    pm.response.to.have.jsonSchema(jsonSchema);\r",
+									"});\r",
+									"\r",
+									"pm.test('Orcamento é um objeto vazio', function () {\r",
+									"        pm.expect(jsonResponse.orcamento).to.be.empty;\r",
+									"});\r",
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "404",
+					"item": [
+						{
+							"name": "400",
+							"item": [
+								{
+									"name": "[400] GET /pedidos/{id} Pedido formato invalido",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													" var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"400\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"O id do Pedido está vazio ou com formato inválido. Tente novamente.\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_og}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/123456",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos",
+												"123456"
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											"const statusCode = 400;\r",
+											"pm.test(\"Status code is \" + statusCode, function () {\r",
+											"    pm.response.to.have.status(statusCode);\r",
+											"});\r",
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "401",
+							"item": [
+								{
+									"name": "[401] GET /pedidos/{id} Access Token inválido",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"401\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"Access_token inválido.\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_og}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{token_invalido}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/{{random_id_pedido}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos",
+												"{{random_id_pedido}}"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "[401] GET /pedidos/{id} App Inválido",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"401\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"App inválido.\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_invalido}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/{{random_id_pedido}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos",
+												"{{random_id_pedido}}"
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											"const statusCode = 401;",
+											"pm.test(\"Status code is \" + statusCode, function () {",
+											"    pm.response.to.have.status(statusCode);",
+											"});",
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "403",
+							"item": [
+								{
+									"name": "[403] GET /pedidos/{id} - pedido de lab <> do app",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"403\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"O pedido não pertence ao laboratório informado no header.\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_og}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/a30887d1-b9d7-45b8-801f-0e1b1e2a4c98",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos",
+												"a30887d1-b9d7-45b8-801f-0e1b1e2a4c98"
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											"const statusCode = 403;",
+											"pm.test(\"Status code is \" + statusCode, function () {",
+											"    pm.response.to.have.status(statusCode);",
+											"});",
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "404",
+							"item": [
+								{
+									"name": "[404] GET /pedidos/{id} pedido não encontrado",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"404\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"O pedido não foi encontrado.\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_og}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/5a6a2da2-3af9-42a4-abeb-86cd57f21665",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos",
+												"5a6a2da2-3af9-42a4-abeb-86cd57f21665"
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											"const statusCode = 404;\r",
+											"pm.test(\"Status code is \" + statusCode, function () {\r",
+											"    pm.response.to.have.status(statusCode);\r",
+											"});\r",
+											""
+										]
+									}
+								}
+							]
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"requests": {},
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"requests": {},
+								"exec": [
+									"const jsonSchema = {\r",
+									"  \"type\": \"object\",\r",
+									"  \"properties\": {\r",
+									"    \"erros\": {\r",
+									"      \"type\": \"array\",\r",
+									"      \"items\": {\r",
+									"        \"type\": \"object\",\r",
+									"        \"properties\": {\r",
+									"          \"codigo\": { \"type\": \"string\",\"minLength\": 3 },\r",
+									"          \"mensagem\": { \"type\": \"string\",\"minLength\": 10 }\r",
+									"        },\r",
+									"        \"required\": [\"codigo\",\"mensagem\"]\r",
+									"      }\r",
+									"    },\r",
+									"    \"traceId\": { \"type\": \"string\",\"format\": \"uuid\",\"minLength\": 36 }\r",
+									"  },\r",
+									"  \"required\": [\"erros\", \"traceId\"]\r",
+									"};\r",
+									"\r",
+									"\r",
+									"pm.test(\"JSON Schema is valid\", function () {\r",
+									"    pm.response.to.have.jsonSchema(jsonSchema);\r",
+									"});\r",
+									"\r",
+									"var jsonData = pm.response.json();\r",
+									"var traceId = jsonData.traceId;\r",
+									"pm.test(\"Mensagem de erro possui o campo 'traceId' = \" + traceId, function () {\r",
+									"    pm.expect(jsonData.traceId).to.not.be.empty;\r",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "[F003] POST /integracao-laboratorio",
+			"item": [
+				{
+					"name": "Sucesso (202)",
+					"item": [
+						{
+							"name": "[202] /pedidos/confirmacoes/integracao-laboratorio Sucesso",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Corpo da resposta está vazio\", function () {\r",
+											"    pm.expect(pm.response.text()).to.be.empty;\r",
+											"});"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "client_id",
+										"value": "{{client_id_og}}",
+										"type": "text"
+									},
+									{
+										"key": "access_token",
+										"value": "{{oauth}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/{{random_id_pedido}}/confirmacoes/integracao-laboratorio",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"{{enviroment}}",
+										"{{api}}",
+										"{{version}}",
+										"pedidos",
+										"{{random_id_pedido}}",
+										"confirmacoes",
+										"integracao-laboratorio"
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {},
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {},
+								"exec": [
+									"const statusCode = 202;\r",
+									"pm.test(\"Status code is \" + statusCode, function () {\r",
+									"    pm.response.to.have.status(statusCode);\r",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Erros",
+					"item": [
+						{
+							"name": "401",
+							"item": [
+								{
+									"name": "[401] POST /pedidos Access Token inválido",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"401\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"Access_token inválido.\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_og}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth_invalido}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/{{random_id_pedido}}/confirmacoes/integracao-laboratorio",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos",
+												"{{random_id_pedido}}",
+												"confirmacoes",
+												"integracao-laboratorio"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "[401] POST /pedidos App inválido",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"401\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"App inválido.\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_invalido}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/{{random_id_pedido}}/confirmacoes/integracao-laboratorio",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos",
+												"{{random_id_pedido}}",
+												"confirmacoes",
+												"integracao-laboratorio"
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											"const statusCode = 401;",
+											"pm.test(\"Status code is \" + statusCode, function () {",
+											"    pm.response.to.have.status(statusCode);",
+											"});",
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "404",
+							"item": [
+								{
+									"name": "[404] /pedidos/confirmacoes/integracao-laboratorio Pedido não encontrado",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"var jsonData = pm.response.json();\r",
+													"\r",
+													"var codigo = \"404\";\r",
+													"pm.test(\"Mensagem de erro, 'codigo' = \" + codigo, function () {\r",
+													"    pm.expect(jsonData.erros[0].codigo).to.eql(codigo);\r",
+													"});\r",
+													"\r",
+													"var mensagem = \"O pedido não foi encontrado.\";\r",
+													"pm.test(\"Mensagem de erro, 'mensagem' = \" + mensagem, function () {\r",
+													"    pm.expect(jsonData.erros[0].mensagem).to.eql(mensagem);\r",
+													"});\r",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "client_id",
+												"value": "{{client_id_og}}",
+												"type": "text"
+											},
+											{
+												"key": "access_token",
+												"value": "{{oauth}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/5a6a2da2-3af9-42a4-abeb-86cd57f21665/confirmacoes/integracao-laboratorio",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"{{enviroment}}",
+												"{{api}}",
+												"{{version}}",
+												"pedidos",
+												"5a6a2da2-3af9-42a4-abeb-86cd57f21665",
+												"confirmacoes",
+												"integracao-laboratorio"
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											"const statusCode = 404;\r",
+											"pm.test(\"Status code is \" + statusCode, function () {\r",
+											"    pm.response.to.have.status(statusCode);\r",
+											"});"
+										]
+									}
+								}
+							]
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {},
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {},
+								"exec": [
+									"const jsonSchema = {\r",
+									"  \"type\": \"object\",\r",
+									"  \"properties\": {\r",
+									"    \"erros\": {\r",
+									"      \"type\": \"array\",\r",
+									"      \"items\": {\r",
+									"        \"type\": \"object\",\r",
+									"        \"properties\": {\r",
+									"          \"codigo\": { \"type\": \"string\",\"minLength\": 3 },\r",
+									"          \"mensagem\": { \"type\": \"string\",\"minLength\": 10 }\r",
+									"        },\r",
+									"        \"required\": [\"codigo\",\"mensagem\"]\r",
+									"      }\r",
+									"    },\r",
+									"    \"traceId\": { \"type\": \"string\",\"format\": \"uuid\",\"minLength\": 36 }\r",
+									"  },\r",
+									"  \"required\": [\"erros\", \"traceId\"]\r",
+									"};\r",
+									"\r",
+									"\r",
+									"pm.test(\"JSON Schema is valid\", function () {\r",
+									"    pm.response.to.have.jsonSchema(jsonSchema);\r",
+									"});\r",
+									"\r",
+									"var jsonData = pm.response.json();\r",
+									"var traceId = jsonData.traceId;\r",
+									"pm.test(\"Mensagem de erro possui o campo 'traceId' = \" + traceId, function () {\r",
+									"    pm.expect(jsonData.traceId).to.not.be.empty;\r",
+									"});\r",
+									""
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "fluxo integracao-laboratorio",
+			"item": [
+				{
+					"name": "[200] GET /pedidos Sucesso - integradoLab = false",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "client_id",
+								"value": "{{client_id_og}}",
+								"type": "text"
+							},
+							{
+								"key": "access_token",
+								"value": "{{oauth}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?integradoLab=false",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{enviroment}}",
+								"{{api}}",
+								"{{version}}",
+								"pedidos"
+							],
+							"query": [
+								{
+									"key": "dataInicio",
+									"value": "2025-09-29",
+									"disabled": true
+								},
+								{
+									"key": "dataFim",
+									"value": "2025-09-29",
+									"disabled": true
+								},
+								{
+									"key": "integradoLab",
+									"value": "false"
+								},
+								{
+									"key": "laboratorio",
+									"value": "04693846000105",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[200] GET /pedidos/{id} Sucesso",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "client_id",
+								"value": "{{client_id_og}}",
+								"type": "text"
+							},
+							{
+								"key": "access_token",
+								"value": "{{oauth}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/471e87f6-e440-43ec-ac4b-5e7362cc5afe",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{enviroment}}",
+								"{{api}}",
+								"{{version}}",
+								"pedidos",
+								"471e87f6-e440-43ec-ac4b-5e7362cc5afe"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[202] /pedidos/confirmacoes/integracao-laboratorio Sucesso",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Corpo da resposta está vazio\", function () {\r",
+									"    pm.expect(pm.response.text()).to.be.empty;\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "client_id",
+								"value": "{{client_id_og}}",
+								"type": "text"
+							},
+							{
+								"key": "access_token",
+								"value": "{{oauth}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos/471e87f6-e440-43ec-ac4b-5e7362cc5afe/confirmacoes/integracao-laboratorio",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{enviroment}}",
+								"{{api}}",
+								"{{version}}",
+								"pedidos",
+								"471e87f6-e440-43ec-ac4b-5e7362cc5afe",
+								"confirmacoes",
+								"integracao-laboratorio"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[200] GET /pedidos Sucesso - integradoLab = true",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "client_id",
+								"value": "{{client_id_og}}",
+								"type": "text"
+							},
+							{
+								"key": "access_token",
+								"value": "{{oauth}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/{{enviroment}}/{{api}}/{{version}}/pedidos?integradoLab=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{enviroment}}",
+								"{{api}}",
+								"{{version}}",
+								"pedidos"
+							],
+							"query": [
+								{
+									"key": "dataInicio",
+									"value": "2025-09-01",
+									"disabled": true
+								},
+								{
+									"key": "dataFim",
+									"value": "2025-09-18",
+									"disabled": true
+								},
+								{
+									"key": "integradoLab",
+									"value": "true"
+								},
+								{
+									"key": "laboratorio",
+									"value": "04693846000105",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "1. consultar pedidos do dia com integradoLab = false\n    \n2. com o id do pedido que possui o campo \"idPedidoOpticlick\", consultar pelo id e verificar que é um pedido promo = possui cupom ipremios\n    \n3. efetuar a confirmacao, com o id do pedido do passo 2\n    \n4. consultar pedidos do dia com integradoLab = true, verificar que o pedido do passo 2 retorna na lista",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							"\r",
+							"\r",
+							"// pm.execution.skipRequest();"
+						]
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "api",
+			"value": "conecta-pedidos"
+		},
+		{
+			"key": "version",
+			"value": "v1"
+		},
+		{
+			"key": "revision",
+			"value": "6"
+		},
+		{
+			"key": "client_id_og",
+			"value": "883b0194-10a8-451e-bb38-1e61828c6f8b"
+		},
+		{
+			"key": "client_secret_og",
+			"value": "f977d249-2b62-4ce8-aa50-08c75d0afd0a"
+		},
+		{
+			"key": "laboratorio_og",
+			"value": "04693846000105"
+		},
+		{
+			"key": "id_pedido",
+			"value": "a30887d1-b9d7-45b8-801f-0e1b1e2a4c98"
+		},
+		{
+			"key": "baseUrl",
+			"value": "https://api.essilor.com.br"
+		},
+		{
+			"key": "enviroment",
+			"value": "dev"
+		},
+		{
+			"key": "random_id_pedido",
+			"value": "a30887d1-b9d7-45b8-801f-0e1b1e2a4c98"
+		},
+		{
+			"key": "oauth",
+			"value": "0308eea9-7e6e-4fe3-80ee-42c988acb48e"
+		},
+		{
+			"key": "token_invalido",
+			"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhbGItYXV0aG9yaXphdGlvbi5zZW5zZWRpYS5jb20iLCJpc3MiOiIxMC4wLjQuMTMiLCJzdWIiOiJjZTQzODRkNy1iNDJkLTMwNTItYTJkMC1kODhkYmE5ZTA1NGYiLCJleHAiOjM2MDAsImlhdCI6MTU4NDQ2NjI3OSwiQXBwOiAiOiJEaW9nbyBNb3V0aW5obyAtIFNlbnNlZGlhIiwiQ29kZTogIjoiOGY4NjFmZDUtNjFmNy0zMWQ5LWE1MzAtNjZlMzY2YzhlMTM5In0.yIQOStxcfpG_ZafEJ8hRusj4SrqGR8XVHhyZSgkUmcM"
+		},
+		{
+			"key": "lab_nao_autorizado",
+			"value": "40506388000111"
+		},
+		{
+			"key": "client_id_invalido",
+			"value": "883b0194-10a8-451e-bb38-1e61828c6f00"
+		},
+		{
+			"key": "oauth_invalido",
+			"value": "i000e937-2b75-4d73-9a72-acb1c7w00j00"
+		}
+	]
+}
