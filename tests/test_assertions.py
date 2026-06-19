@@ -209,9 +209,9 @@ class TestTranslateExpectEql:
         assert result == '    Should Be Equal As Strings    ${jsonData.erros[0].codigo}    401'
 
     def test_translate_numeric_value(self):
-        """Deve traduzir comparacao com numero."""
+        """Deve traduzir comparacao com numero (sem aspas = variavel JS)."""
         result = translate_expect_eql("totalItens", "10")
-        assert result == "    Should Be Equal As Strings    ${totalItens}    10"
+        assert result == "    Should Be Equal As Strings    ${totalItens}    ${10}"
 
     def test_translate_empty_values(self):
         """Deve retornar None para valores vazios."""

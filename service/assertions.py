@@ -76,7 +76,7 @@ def translate_expect_eql(variable, value):
 
     Args:
         variable: nome da variavel
-        value: valor esperado
+        value: valor esperado (pode ser string literal ou variavel JS)
 
     Returns:
         Linha Robot ou None se valores vazios.
@@ -84,10 +84,16 @@ def translate_expect_eql(variable, value):
     if not variable or not value:
         return None
 
-    # Remove aspas do valor esperado
-    clean_value = value.strip('"').strip("'")
+    # Se o valor estiver entre aspas, é uma string literal
+    is_quoted = (value.startswith('"') and value.endswith('"')) or \
+                (value.startswith("'") and value.endswith("'"))
 
-    return "    Should Be Equal As Strings    ${" + variable + "}    " + clean_value
+    if is_quoted:
+        clean_value = value.strip('"').strip("'")
+        return "    Should Be Equal As Strings    ${" + variable + "}    " + clean_value
+    else:
+        # Valor é uma variavel JS -> referencia como variavel Robot
+        return "    Should Be Equal As Strings    ${" + variable + "}    ${" + value + "}"
 
 
 def translate_expect_type(variable, type_name):
