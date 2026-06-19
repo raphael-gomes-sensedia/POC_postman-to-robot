@@ -340,7 +340,7 @@ class TestGenerateStatusValidation:
 # --- Tests: generate_assertions_from_events ---
 
 class TestGenerateAssertionsFromEvents:
-    """Testes para a funcao generate_assertions_from_events."""
+    """Testes para a funcao generate_assertions_from_events (usa modulo assertions)."""
 
     def test_no_events(self):
         """Deve retornar lista vazia sem eventos."""
@@ -354,16 +354,17 @@ class TestGenerateAssertionsFromEvents:
             "script": 'pm.response.to.have.status(201);',
         }]
         result = generate_assertions_from_events(events)
-        assert any("Status 201" in line for line in result)
+        assert any("Status Should Be" in line for line in result)
+        assert any("201" in line for line in result)
 
     def test_detect_json_schema(self):
-        """Deve detectar jsonSchema no script."""
+        """JsonSchema nao e traduzido pelo modulo assertions (Fase 2 - IA)."""
         events = [{
             "listen": "test",
             "script": 'pm.response.to.have.jsonSchema(schema);',
         }]
         result = generate_assertions_from_events(events)
-        assert any("TODO: Validar JSON Schema" in line for line in result)
+        assert result == []
 
     def test_detect_collection_variables_set(self):
         """Deve detectar collectionVariables.set no script."""
@@ -372,52 +373,54 @@ class TestGenerateAssertionsFromEvents:
             "script": 'pm.collectionVariables.set("oauth", jsonData.access_token);',
         }]
         result = generate_assertions_from_events(events)
-        assert any("Set Test Variable ${oauth}" in line for line in result)
+        assert any("Set Test Variable" in line for line in result)
+        assert any("${oauth}" in line for line in result)
 
-    def test_detect_empty_validation(self):
-        """Deve detectar validacao de response vazio."""
+    def test_detect_not_empty(self):
+        """Deve detectar not empty."""
         events = [{
             "listen": "test",
-            "script": 'pm.expect(data.pedidos).to.be.empty;',
+            "script": 'pm.expect(accessToken).to.not.be.empty;',
         }]
         result = generate_assertions_from_events(events)
-        assert any("TODO: Validar response vazio" in line for line in result)
+        assert any("Should Not Be Empty" in line for line in result)
 
     def test_detect_string_type(self):
-        """Deve detectar validacao de tipo string."""
+        """Deve detectar tipo string."""
         events = [{
             "listen": "test",
             "script": "pm.expect(accessToken).to.be.a('string');",
         }]
         result = generate_assertions_from_events(events)
-        assert any("TODO: Validar tipo string" in line for line in result)
+        assert any("Should Not Be Empty" in line for line in result)
 
     def test_detect_above_zero(self):
-        """Deve detectar validacao de valor > 0."""
+        """Deve detectar valor > 0."""
         events = [{
             "listen": "test",
             "script": "pm.expect(totalItens).to.be.above(0);",
         }]
         result = generate_assertions_from_events(events)
-        assert any("TODO: Validar valor > 0" in line for line in result)
+        assert any("Should Be True" in line for line in result)
+        assert "> 0" in result[0]
 
     def test_detect_exact_equality(self):
-        """Deve detectar validacao de valor exato."""
+        """Deve detectar valor exato."""
         events = [{
             "listen": "test",
             "script": 'pm.expect(jsonData.erros[0].codigo).to.eql("401");',
         }]
         result = generate_assertions_from_events(events)
-        assert any("TODO: Validar valor exato" in line for line in result)
+        assert any("Should Be Equal As Strings" in line for line in result)
 
     def test_detect_not_null(self):
-        """Deve detectar validacao de nao null."""
+        """Deve detectar nao null."""
         events = [{
             "listen": "test",
             "script": "pm.expect(randomId).to.not.be.null;",
         }]
         result = generate_assertions_from_events(events)
-        assert any("TODO: Validar nao null" in line for line in result)
+        assert any("Should Be Empty" in line for line in result)
 
     def test_prerequest_event_ignored(self):
         """Deve ignorar eventos prerequest."""
@@ -478,7 +481,7 @@ class TestGenerateTestCase:
         }
         result = generate_test_case(request)
 
-        assert "TODO: Validar valor exato" in result
+        assert "Should Be Equal As Strings" in result
 
     def test_post_test_with_body(self):
         """Deve gerar teste POST com body."""

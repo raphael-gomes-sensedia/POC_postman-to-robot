@@ -177,43 +177,11 @@ def generate_status_validation(status_code):
 def generate_assertions_from_events(events):
     """Gera assertions a partir dos eventos (test scripts) do Postman.
 
-    No momento, gera placeholders para os eventos.
-    A traducao completa sera feita na Fase 2 com IA.
+    Usa o modulo assertions para traduzir as assertions do Postman JS
+    para Robot Framework.
     """
-    lines = []
-    for event in events:
-        if event["listen"] == "test":
-            script = event["script"]
-
-            status_match = re.search(r'pm\.response\.to\.have\.status\((\d+)\)', script)
-            if status_match:
-                code = status_match.group(1)
-                lines.append("    # Assertion extraida: Status " + code)
-                lines.append("    Status Should Be    " + code + "    ${api_response}")
-
-            if "jsonSchema" in script:
-                lines.append(f"    # TODO: Validar JSON Schema (Fase 2 - IA)")
-
-            var_set = re.findall(r'pm\.collectionVariables\.set\("(\w+)"\s*,\s*([^)]+)\)', script)
-            for var_name, var_value in var_set:
-                lines.append(f"    # Extraida: Set Test Variable ${{{var_name}}}")
-
-            if "to.be.empty" in script or "to.have.lengthOf(0)" in script:
-                lines.append(f"    # TODO: Validar response vazio (Fase 2 - IA)")
-
-            if "to.be.a('string')" in script:
-                lines.append(f"    # TODO: Validar tipo string (Fase 2 - IA)")
-
-            if "to.be.above(0)" in script:
-                lines.append(f"    # TODO: Validar valor > 0 (Fase 2 - IA)")
-
-            if "to.eql(" in script:
-                lines.append(f"    # TODO: Validar valor exato (Fase 2 - IA)")
-
-            if "to.not.be.null" in script:
-                lines.append(f"    # TODO: Validar nao null (Fase 2 - IA)")
-
-    return lines
+    from service.assertions import parse_assertions
+    return parse_assertions(events)
 
 
 def generate_test_case(request):
