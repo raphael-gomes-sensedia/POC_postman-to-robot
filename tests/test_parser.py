@@ -556,20 +556,20 @@ class TestParseCollection:
         collection_file = tmp_path / "collection.json"
         collection_file.write_text(json.dumps(sample_collection))
 
-        results = parse_collection(str(collection_file))
+        result = parse_collection(str(collection_file))
 
-        assert len(results) == 2
-        assert results[0]["method"] == "GET"
-        assert results[1]["method"] == "POST"
-        assert "Joao" in results[1]["body"]
+        assert len(result["requests"]) == 2
+        assert result["requests"][0]["method"] == "GET"
+        assert result["requests"][1]["method"] == "POST"
+        assert "Joao" in result["requests"][1]["body"]
 
     def test_parse_collection_empty(self, tmp_path):
-        """Deve retornar lista vazia para collection sem items."""
+        """Deve retornar requests vazios para collection sem items."""
         collection_file = tmp_path / "empty.json"
         collection_file.write_text('{"info": {}, "item": []}')
 
-        results = parse_collection(str(collection_file))
-        assert results == []
+        result = parse_collection(str(collection_file))
+        assert result["requests"] == []
 
     def test_parse_collection_with_variables_resolved(self, tmp_path):
         """Deve resolver variaveis na collection."""
@@ -589,5 +589,5 @@ class TestParseCollection:
         collection_file = tmp_path / "resolved.json"
         collection_file.write_text(json.dumps(collection))
 
-        results = parse_collection(str(collection_file))
-        assert results[0]["url"] == "https://resolved.com/users"
+        result = parse_collection(str(collection_file))
+        assert result["requests"][0]["url"] == "https://resolved.com/users"

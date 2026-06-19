@@ -176,24 +176,24 @@ def parse_collection_items(items, group_path, variables, results):
 
 
 def parse_collection(input_file):
-    """Funcao principal: lê o JSON e retorna lista de requests parseados.
+    """Funcao principal: lê o JSON e retorna todos os dados da collection.
 
-    Cada request retornado tem:
-      - group: caminho da pasta (ex: "[F001] GET /pedidos / Sucesso [200,206]")
-      - name: nome do teste
-      - method: metodo HTTP (GET, POST, etc)
-      - url: URL completa com variaveis resolvidas
-      - headers: dicionario de headers
-      - body: body da request (se existir)
-      - auth: tipo de autenticacao (se existir)
-      - disabled: True se o request deve ser pulado
-      - events: lista de scripts de teste (test scripts)
+    Retorna um dicionario com:
+      - collection_name: nome da collection
+      - variables: dicionario de variaveis resolvidas
+      - requests: lista de requests parseados
     """
     collection = load_collection(input_file)
     variables = extract_variables(collection)
+
+    collection_name = collection.get("info", {}).get("name", "Sem nome")
 
     results = []
     top_level_items = collection.get("item", [])
     parse_collection_items(top_level_items, "", variables, results)
 
-    return results
+    return {
+        "collection_name": collection_name,
+        "variables": variables,
+        "requests": results,
+    }
