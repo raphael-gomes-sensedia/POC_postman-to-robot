@@ -1,5 +1,7 @@
 # Output
 output/
+results
+reference
 
 # Python
 __pycache__/

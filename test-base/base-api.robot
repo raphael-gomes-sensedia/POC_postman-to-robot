@@ -6,7 +6,7 @@ Library         DateTime
 Library         ImapLibrary2
 Library         JSONLibrary
 Library         OperatingSystem
-Library         RequestsLibrary                                                                             
+Library         RequestsLibrary
 Library         String 
 
 *** Variables ***
@@ -215,7 +215,7 @@ Get Payload Orcamento
     ${json_file}=   Get File    ${EXECDIR}/resources/${file_name}
     ${json_dict}=   Evaluate    json.loads($json_file)      json
 
-    [Return]    ${json_dict}
+    RETURN    ${json_dict}
 
 Gerar Id Pedido Aleatorio
     ${hoje}=             Get Current Date    result_format=datetime

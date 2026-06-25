@@ -98,7 +98,7 @@ pip install -r requirements.txt
 ### 4. Instalar dependências do Robot Framework (para executar os testes)
 
 ```powershell
-pip install robotframework robotframework-requests robotframework-collections robotframework-stringlibrary
+pip install robotframework-requests robotframework-jsonlibrary robotframework-imaplibrary2
 ```
 
 ## Como Usar

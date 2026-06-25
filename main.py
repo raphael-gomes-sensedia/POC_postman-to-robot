@@ -14,7 +14,7 @@ from service.generator import generate_robot
 @click.command()
 @click.option("--input", "input_file", required=True, help="Caminho para o arquivo da collection Postman (JSON)")
 @click.option("--output", "output_dir", required=True, help="Diretorio de saida para os arquivos .robot")
-@click.option("--base-resource", "base_resource", default="/test-base/base-api.robot", help="Caminho para o base-api.robot")
+@click.option("--base-resource", "base_resource", default="../test-base/base-api.robot", help="Caminho para o base-api.robot")
 @click.option("--env", "environment", default="dev", help="Ambiente (dev, hml)")
 @click.option("--ai-api", "ai_api", default="opencode", help="Provedor de IA (opencode, openai)")
 @click.option("--ai-model", "ai_model", default="opencode/oci", help="Modelo de IA")
