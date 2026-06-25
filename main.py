@@ -4,7 +4,6 @@ import os
 import sys
 import click
 
-# Adiciona o diretorio raiz ao path para importar os modulos
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from service.parser import parse_collection
@@ -25,26 +24,32 @@ def main(input_file, output_dir, base_resource, environment, ai_api, ai_model):
     click.echo("=" * 60)
     click.echo()
 
-    # Fase 1: Parsear a collection
+    # Resolve caminho absoluto do base-resource
+    baseapi_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test-base", "base-api.robot")
+    if not os.path.exists(baseapi_file):
+        baseapi_file = None
+
     click.echo("[1/2] Parseando collection...")
-    data = parse_collection(input_file)
+    data = parse_collection(input_file, baseapi_file=baseapi_file)
 
     collection_name = data["collection_name"]
     variables = data["variables"]
     requests = data["requests"]
+    baseapi_vars = data.get("baseapi_variables", set())
+    baseapi_keywords = data.get("baseapi_keywords", set())
 
     click.echo(f"  Collection: {collection_name}")
-    click.echo(f"  Variaveis: {len(variables)}")
-    click.echo(f"  Requests: {len(requests)}")
+    click.echo(f"  Variaveis da collection: {len(variables)}")
+    click.echo(f"  Requests validos: {len(requests)}")
+    click.echo(f"  Variaveis catalogadas no base-api: {len(baseapi_vars)}")
+    click.echo(f"  Keywords catalogadas no base-api: {len(baseapi_keywords)}")
     click.echo()
 
-    # Fase 2: Gerar arquivos .robot
     click.echo("[2/2] Gerando arquivos .robot...")
     files = generate_robot(data, output_dir, base_resource, environment)
 
     click.echo()
     click.echo(f"{len(files)} arquivos gerados em: {output_dir}")
-    click.echo()
     for f in files:
         click.echo(f"  - {os.path.basename(f)}")
 

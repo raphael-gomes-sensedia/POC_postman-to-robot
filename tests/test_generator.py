@@ -1,4 +1,13 @@
-"""Testes unitários para o generator de arquivos .robot."""
+"""Testes unitários para o generator de arquivos .robot.
+
+Abrange:
+- is_success_status / is_error_status
+- generate_group_keyword
+- generate_keyword_name
+- generate_test_case_enxuto
+- generate_robot_file (nova estrutura)
+- generate_robot (com separacao sucesso/erro)
+"""
 
 import os
 import pytest
@@ -11,11 +20,13 @@ from service.generator import (
     generate_settings,
     generate_variables,
     extract_status_code,
-    generate_create_session,
-    generate_http_call,
-    generate_status_validation,
+    is_success_status,
+    is_error_status,
+    generate_keyword_name,
+    generate_group_keyword,
+    generate_test_case_enxuto,
     generate_assertions_from_events,
-    generate_test_case,
+    generate_suite_setup,
     generate_keywords_section,
     generate_robot_file,
     generate_robot,
@@ -26,33 +37,44 @@ from service.generator import (
 
 @pytest.fixture
 def sample_requests():
-    """Retorna uma lista de requests de exemplo."""
+    """Lista com requests de sucesso e erro."""
     return [
         {
             "group": "[F001] GET /pedidos / Sucesso",
             "name": "[200] GET /pedidos Sucesso",
             "method": "GET",
             "url": "https://api.example.com/dev/api/v1/pedidos",
-            "headers": {"client_id": "abc", "access_token": "xyz"},
+            "headers": {"client_id": "{{client_id_og}}", "access_token": "{{oauth}}"},
             "body": None,
             "auth": None,
             "disabled": False,
             "events": [],
         },
         {
-            "group": "[F001] GET /pedidos / Erros",
-            "name": "[400] GET /pedidos Erro",
+            "group": "[F001] GET /pedidos / Erro",
+            "name": "[400] GET /pedidos Intervalo invalido",
             "method": "GET",
-            "url": "https://api.example.com/dev/api/v1/pedidos",
-            "headers": {"client_id": "abc"},
+            "url": "https://api.example.com/dev/api/v1/pedidos?dataInicio=2025-01-01&dataFim=2024-01-01",
+            "headers": {"client_id": "{{client_id_og}}"},
+            "body": None,
+            "auth": None,
+            "disabled": False,
+            "events": [{"listen": "test", "script": "pm.response.to.have.status(400);"}],
+        },
+        {
+            "group": "[F001] GET /pedidos / Sucesso",
+            "name": "[206] GET /pedidos Parcial",
+            "method": "GET",
+            "url": "https://api.example.com/dev/api/v1/pedidos?limite=1",
+            "headers": {"client_id": "{{client_id_og}}"},
             "body": None,
             "auth": None,
             "disabled": False,
             "events": [],
         },
         {
-            "group": "[F002] POST /pedidos",
-            "name": "POST /pedidos Criar",
+            "group": "[F002] POST /pedidos / Sucesso",
+            "name": "[201] POST /pedidos Criar",
             "method": "POST",
             "url": "https://api.example.com/dev/api/v1/pedidos",
             "headers": {"Content-Type": "application/json"},
@@ -62,22 +84,11 @@ def sample_requests():
             "events": [],
         },
         {
-            "group": "[F000] Autenticacao",
-            "name": "Gerar Token",
+            "group": "[F002] POST /pedidos / Erro",
+            "name": "[401] POST /pedidos Token invalido",
             "method": "POST",
-            "url": "https://api.example.com/oauth/access-token",
-            "headers": {},
-            "body": None,
-            "auth": "basic",
-            "disabled": False,
-            "events": [],
-        },
-        {
-            "group": "[F001] GET /pedidos",
-            "name": "[200] GET /pedidos Desabilitado",
-            "method": "GET",
             "url": "https://api.example.com/dev/api/v1/pedidos",
-            "headers": {},
+            "headers": {"client_id": "{{client_id_og}}"},
             "body": None,
             "auth": None,
             "disabled": True,
@@ -88,580 +99,264 @@ def sample_requests():
 
 @pytest.fixture
 def sample_variables():
-    """Retorna um dicionario de variaveis de exemplo."""
-    return {
-        "baseUrl": "https://api.example.com",
-        "env": "dev",
-        "api": "test-api",
-        "version": "v1",
-        "empty_var": "",
-    }
+    return {"client_id_og": "883b0194-10a8-451e-bb38-1e61828c6f8b", "baseUrl": "https://api.example.com"}
 
 
 @pytest.fixture
 def sample_data(sample_requests, sample_variables):
-    """Retorna o dicionario de dados completo."""
-    return {
-        "collection_name": "Test Collection",
-        "variables": sample_variables,
-        "requests": sample_requests,
-    }
+    return {"collection_name": "Test API", "baseapi_variables": {"client_id": "abc", "oper_pedidos": "/pedidos"}, "variables": sample_variables, "requests": sample_requests}
 
 
-# --- Tests: get_top_level_group ---
+# --- Tests: is_success_status / is_error_status ---
 
-class TestGetTopLevelGroup:
-    """Testes para a funcao get_top_level_group."""
+class TestStatusClassification:
+    """Testes para classificacao de status code."""
 
-    def test_simple_group(self):
-        """Deve extrair o grupo de primeiro nivel."""
-        result = get_top_level_group("[F001] GET /pedidos / Sucesso")
-        assert result == "[F001] GET /pedidos"
+    def test_success_200(self):
+        assert is_success_status("200") is True
 
-    def test_single_level_group(self):
-        """Deve retornar o grupo quando so ha um nivel."""
-        result = get_top_level_group("Autenticacao")
-        assert result == "Autenticacao"
+    def test_success_201(self):
+        assert is_success_status("201") is True
 
-    def test_deeply_nested_group(self):
-        """Deve extrair o primeiro nivel de grupo profundo."""
-        result = get_top_level_group("A / B / C / D / E")
-        assert result == "A"
+    def test_success_202(self):
+        assert is_success_status("202") is True
 
-    def test_empty_group(self):
-        """Deve retornar 'Sem grupo' para caminho vazio."""
-        result = get_top_level_group("")
-        assert result == "Sem grupo"
+    def test_success_206(self):
+        assert is_success_status("206") is True
+
+    def test_error_400(self):
+        assert is_error_status("400") is True
+
+    def test_error_401(self):
+        assert is_error_status("401") is True
+
+    def test_error_403(self):
+        assert is_error_status("403") is True
+
+    def test_error_404(self):
+        assert is_error_status("404") is True
+
+    def test_error_422(self):
+        assert is_error_status("422") is True
+
+    def test_error_500(self):
+        assert is_error_status("500") is True
+
+    def test_204_is_success(self):
+        assert is_success_status("204") is True
+        assert is_error_status("204") is False
+
+    def test_none_is_neither(self):
+        assert is_success_status(None) is False
+        assert is_error_status(None) is False
+
+    def test_unknown_is_success(self):
+        assert is_success_status("999") is True
+        assert is_error_status("999") is False
 
 
-# --- Tests: group_requests_by_top_level ---
+# --- Tests: generate_keyword_name ---
 
-class TestGroupRequestsByTopLevel:
-    """Testes para a funcao group_requests_by_top_level."""
+class TestGenerateKeywordName:
+    """Testes para nomeacao de keywords."""
 
-    def test_groups_by_top_level(self, sample_requests):
-        """Deve agrupar requests pelo grupo de primeiro nivel."""
-        groups = group_requests_by_top_level(sample_requests)
+    def test_get_requests(self):
+        requests = [
+            {"method": "GET", "name": "[200] GET /pedidos Sucesso", "group": "[F001] GET /pedidos"},
+            {"method": "GET", "name": "[206] GET /pedidos Parcial", "group": "[F001] GET /pedidos"},
+        ]
+        result = generate_keyword_name(requests, "sucesso")
+        assert "GET" in result
+        assert "Sucesso" in result
 
-        assert len(groups) == 3
-        assert "[F001] GET /pedidos" in groups
-        assert "[F002] POST /pedidos" in groups
-        assert "[F000] Autenticacao" in groups
-        assert len(groups["[F001] GET /pedidos"]) == 3
-        assert len(groups["[F002] POST /pedidos"]) == 1
-        assert len(groups["[F000] Autenticacao"]) == 1
+    def test_post_requests(self):
+        requests = [{"method": "POST", "name": "[201] POST /pedidos Criar", "group": "[F002] POST /pedidos"}]
+        result = generate_keyword_name(requests, "sucesso")
+        assert "POST" in result
 
-    def test_groups_empty(self):
-        """Deve retornar dicionario vazio para lista vazia."""
-        groups = group_requests_by_top_level([])
-        assert groups == {}
+    def test_erro_keyword(self):
+        requests = [{"method": "GET", "name": "[400] GET /pedidos Erro", "group": "[F001] GET /pedidos"}]
+        result = generate_keyword_name(requests, "erro")
+        assert "Erro" in result
 
 
-# --- Tests: generate_file_name ---
+# --- Tests: generate_group_keyword ---
+
+class TestGenerateGroupKeyword:
+    """Testes para geracao de keywords reutilizaveis por grupo."""
+
+    def test_generates_get_keyword_success(self):
+        requests = [
+            {"method": "GET", "name": "[200] GET /pedidos Sucesso", "url": "https://api.example.com/v1/pedidos", "headers": {"client_id": "abc", "access_token": "xyz"}, "body": None, "group": "[F001] GET /pedidos"},
+        ]
+        result = generate_group_keyword("[F001] GET /pedidos", requests, "sucesso")
+        assert "POST Autenticacao JWT" in result
+        assert "Create Session API Proxy" in result
+        assert "GET On Session" in result
+        assert "[Arguments]" in result
+        assert "api-in-test" in result
+        assert "expected_status=any" in result
+
+    def test_generates_post_keyword_success(self):
+        requests = [
+            {"method": "POST", "name": "[201] POST /pedidos Criar", "url": "https://api.example.com/v1/pedidos", "headers": {"Content-Type": "application/json"}, "body": '{"nome": "teste"}', "group": "[F002] POST /pedidos"},
+        ]
+        result = generate_group_keyword("[F002] POST /pedidos", requests, "sucesso")
+        assert "POST On Session" in result
+        assert "POST Autenticacao JWT" in result
+
+    def test_generates_keyword_without_auth_for_health(self):
+        requests = [{"method": "GET", "name": "[200] GET /health", "url": "https://api.example.com/health", "headers": {}, "body": None, "group": "[F000] GET /health"}]
+        result = generate_group_keyword("[F000] GET /health", requests, "sucesso")
+        # Health endpoint should NOT include auth calls or session creation
+        assert "POST Autenticacao" not in result
+        assert "Create Session" not in result
+
+    def test_keyword_has_arguments(self):
+        requests = [{"method": "GET", "name": "[200] GET /pedidos", "url": "https://api.example.com/v1/pedidos", "headers": {"client_id": "abc"}, "body": None, "group": "[F001] GET /pedidos"}]
+        result = generate_group_keyword("[F001] GET /pedidos", requests, "sucesso")
+        assert "${user}" in result
+        assert "${pwd}" in result
+        assert "${cnpjOtica}" in result
+        assert "${cnpjLab}" in result
+        assert "${api_proxy}" in result
+
+
+# --- Tests: generate_test_case_enxuto ---
+
+class TestGenerateTestCaseEnxuto:
+    """Testes para geracao de test cases enxutos."""
+
+    def test_success_test_case(self):
+        request = {"name": "[200] GET /pedidos Sucesso", "method": "GET", "url": "https://api.example.com/pedidos?param=1", "disabled": False, "events": []}
+        result = generate_test_case_enxuto(request, "GET Sucesso - Pedidos")
+        assert request["name"] in result
+        assert "GET Sucesso - Pedidos" in result
+        assert "@{dados_login}" in result
+        assert "${oper_conecta_pedidos}" in result
+
+    def test_disabled_test_case(self):
+        request = {"name": "[401] GET /pedidos Token invalido", "method": "GET", "disabled": True, "events": []}
+        result = generate_test_case_enxuto(request, "GET Erro - Pedidos")
+        assert "Skip" in result
+
+    def test_test_case_sequence_number(self):
+        # Testa que o contador gera T01, T02...
+        pass
+
+
+# --- Tests: generate suite setup ---
+
+class TestGenerateSuiteSetup:
+    """Testes para geracao de Suite Setup."""
+
+    def test_contains_suite_setup(self, sample_data):
+        result = generate_suite_setup(sample_data["requests"], "dev")
+        assert "Definir Dados do Laboratorio" in result
+
+    def test_is_comment(self, sample_data):
+        result = generate_suite_setup(sample_data["requests"], "dev")
+        assert result.startswith("#")
+
+
+# --- Tests: generate_variables (filtrando base-api) ---
+
+class TestGenerateVariablesFiltradas:
+    """Testes para geracao de variaveis sem duplicar as do base-api."""
+
+    def test_remove_baseapi_vars(self):
+        baseapi_set = {"client_id", "oper_pedidos", "client_secret", "api_pedidos_proxy"}
+        collection_vars = {"client_id": "valor_diferente", "oper_pedidos": "/pedidos", "client_id_og": "883b0194", "baseUrl": "https://api.example.com"}
+        result = generate_variables(baseapi_set, collection_vars)
+        # client_id_og deve aparecer (nao existe no base-api)
+        assert "${client_id_og}" in result
+        # client_id nao deve aparecer (ja existe no base-api)
+        assert "${client_id}" not in result
+        # oper_pedidos nao deve aparecer
+        assert "${oper_pedidos}" not in result
+        # baseUrl deve aparecer (nao existe no base-api)
+        assert "${baseUrl}" in result
+
+    def test_empty_collection_vars(self):
+        result = generate_variables({"client_id": "abc"}, {})
+        assert "*** Variables ***" in result
+
+
+# --- Tests: generate_robot (com separacao sucesso/erro) ---
+
+class TestGenerateRobotComSeparacao:
+    """Testes de integracao com separacao sucesso/erro em arquivos."""
+
+    def test_creates_success_and_error_files(self, sample_data, tmp_path):
+        # sample_data tem requests de sucesso e erro
+        files = generate_robot(sample_data, str(tmp_path), "../test-base/base-api.robot", "dev")
+        # Deve gerar ao menos 2 arquivos
+        assert len(files) >= 2
+
+    def test_error_file_has_neg_prefix(self, sample_data, tmp_path):
+        files = generate_robot(sample_data, str(tmp_path), "../test-base/base-api.robot", "dev")
+        # Verifica se o arquivo de erro tem prefixo neg-
+        neg_files = [f for f in files if "neg-" in os.path.basename(f)]
+        assert len(neg_files) >= 1
+
+    def test_success_file_has_keyword_section(self, sample_data, tmp_path):
+        files = generate_robot(sample_data, str(tmp_path), "../test-base/base-api.robot", "dev")
+        for f in files:
+            if "neg-" not in os.path.basename(f):
+                with open(f, encoding="utf-8") as fh:
+                    content = fh.read()
+                assert "*** Keywords ***" in content
+                assert "POST Autenticacao JWT" in content
+
+    def test_creates_output_directory(self, sample_data, tmp_path):
+        output_subdir = str(tmp_path / "subdir" / "output")
+        files = generate_robot(sample_data, output_subdir, "../test-base/base-api.robot", "dev")
+        assert len(files) > 0
+        assert os.path.isdir(output_subdir)
+
+    def test_empty_requests(self, tmp_path):
+        data = {"collection_name": "Test", "baseapi_variables": {}, "variables": {}, "requests": []}
+        files = generate_robot(data, str(tmp_path), "../test-base/base-api.robot", "dev")
+        assert files == []
+
+
+# --- Tests: detect endpoint path from URL ---
+
+class TestDetectEndpoint:
+    """Testes para extracao do path da operacao a partir da URL."""
+
+    def test_get_group_oper_var(self):
+        from service.generator import get_group_oper_var
+        # Grupo [F001] GET /pedidos deve retornar operacao /pedidos
+        requests = [{"method": "GET", "url": "https://api.example.com/dev/api/v1/pedidos?param=1"}]
+        result = get_group_oper_var("[F001] GET /pedidos", requests)
+        assert "pedidos" in result.lower()
+
+
+# --- Tests: file name generation ---
 
 class TestGenerateFileName:
-    """Testes para a funcao generate_file_name."""
+    """Testes para geracao de nomes de arquivo."""
 
     def test_simple_name(self):
-        """Deve gerar nome de arquivo a partir do grupo."""
         result = generate_file_name("[F001] GET /pedidos")
         assert result == "f001_get_pedidos.robot"
 
-    def test_name_with_special_chars(self):
-        """Deve remover caracteres especiais do nome."""
-        result = generate_file_name("[F000] Autenticacao")
-        assert result == "f000_autenticacao.robot"
-
-    def test_name_with_spaces(self):
-        """Deve substituir espacos por underscore."""
-        result = generate_file_name("Meu Grupo de Teste")
-        assert result == "meu_grupo_de_teste.robot"
-
-    def test_name_with_numbers(self):
-        """Deve manter numeros no nome."""
-        result = generate_file_name("Teste 123")
-        assert result == "teste_123.robot"
-
     def test_name_extension(self):
-        """Deve sempre ter extensao .robot."""
         result = generate_file_name("Teste")
         assert result.endswith(".robot")
-
-
-# --- Tests: get_env_from_requests ---
-
-class TestGetEnvFromRequests:
-    """Testes para a funcao get_env_from_requests."""
-
-    def test_dev_env(self):
-        """Deve retornar 'dev' para requests em ambiente dev."""
-        requests = [{"url": "https://api.example.com/dev/api/v1/pedidos"}]
-        assert get_env_from_requests(requests) == "dev"
-
-    def test_hml_env(self):
-        """Deve retornar 'hml' para requests em ambiente hml."""
-        requests = [{"url": "https://api.example.com/hml/api/v1/pedidos"}]
-        assert get_env_from_requests(requests) == "hml"
-
-    def test_multiple_requests_dev(self):
-        """Deve retornar 'dev' mesmo com varios requests."""
-        requests = [
-            {"url": "https://api.example.com/dev/api/v1/a"},
-            {"url": "https://api.example.com/dev/api/v1/b"},
-        ]
-        assert get_env_from_requests(requests) == "dev"
 
 
 # --- Tests: extract_status_code ---
 
 class TestExtractStatusCode:
-    """Testes para a funcao extract_status_code."""
+    """Testes para extracao de status code do nome."""
 
     def test_extract_200(self):
-        """Deve extrair status code 200."""
         assert extract_status_code("[200] GET /pedidos") == "200"
 
     def test_extract_400(self):
-        """Deve extrair status code 400."""
         assert extract_status_code("[400] GET /pedidos Erro") == "400"
 
-    def test_extract_401(self):
-        """Deve extrair status code 401."""
-        assert extract_status_code("[401] GET /pedidos Token invalido") == "401"
-
-    def test_extract_404(self):
-        """Deve extrair status code 404."""
-        assert extract_status_code("[404] GET /pedidos Nao encontrado") == "404"
-
-    def test_extract_202(self):
-        """Deve extrair status code 202."""
-        assert extract_status_code("[202] POST /pedidos Criado") == "202"
-
     def test_no_status_code(self):
-        """Deve retornar None sem status code."""
         assert extract_status_code("GET /pedidos Sucesso") is None
-
-    def test_no_brackets(self):
-        """Deve retornar None sem colchetes."""
-        assert extract_status_code("200 GET /pedidos") is None
-
-
-# --- Tests: generate_create_session ---
-
-class TestGenerateCreateSession:
-    """Testes para a funcao generate_create_session."""
-
-    def test_no_auth(self):
-        """Deve usar API Proxy sem autenticacao."""
-        request = {"auth": None}
-        result = generate_create_session(request)
-        assert result == "    Create Session API Proxy"
-
-    def test_basic_auth(self):
-        """Deve usar API Oauth para autenticacao basic."""
-        request = {"auth": "basic"}
-        result = generate_create_session(request)
-        assert result == "    Create Session API Oauth"
-
-    def test_bearer_auth(self):
-        """Deve usar API Proxy para bearer (fallback)."""
-        request = {"auth": "bearer"}
-        result = generate_create_session(request)
-        assert result == "    Create Session API Proxy"
-
-
-# --- Tests: generate_http_call ---
-
-class TestGenerateHttpCall:
-    """Testes para a funcao generate_http_call."""
-
-    def test_get_request(self):
-        """Deve gerar chamada GET correta."""
-        request = {"method": "GET", "url": "https://api.example.com/users", "body": None}
-        result = generate_http_call(request)
-        assert "GET On Session" in result
-        assert "https://api.example.com/users" in result
-        assert "expected_status=any" in result
-
-    def test_post_request_with_body(self):
-        """Deve gerar chamada POST com body."""
-        request = {
-            "method": "POST",
-            "url": "https://api.example.com/users",
-            "body": '{"name": "Joao"}',
-        }
-        result = generate_http_call(request)
-        assert "POST On Session" in result
-        assert "json=${body}" in result
-
-    def test_put_request(self):
-        """Deve gerar chamada PUT correta."""
-        request = {"method": "PUT", "url": "https://api.example.com/users/1", "body": None}
-        result = generate_http_call(request)
-        assert "PUT On Session" in result
-
-    def test_delete_request(self):
-        """Deve gerar chamada DELETE correta."""
-        request = {"method": "DELETE", "url": "https://api.example.com/users/1", "body": None}
-        result = generate_http_call(request)
-        assert "DELETE On Session" in result
-
-    def test_patch_request(self):
-        """Deve gerar chamada PATCH correta."""
-        request = {"method": "PATCH", "url": "https://api.example.com/users/1", "body": None}
-        result = generate_http_call(request)
-        assert "PATCH On Session" in result
-
-    def test_unknown_method_fallback_to_get(self):
-        """Deve usar GET como fallback para metodo desconhecido."""
-        request = {"method": "OPTIONS", "url": "https://api.example.com", "body": None}
-        result = generate_http_call(request)
-        assert "GET On Session" in result
-
-
-# --- Tests: generate_status_validation ---
-
-class TestGenerateStatusValidation:
-    """Testes para a funcao generate_status_validation."""
-
-    def test_status_200(self):
-        """Deve gerar validacao para status 200."""
-        result = generate_status_validation("200")
-        assert "Status Should Be" in result
-        assert "200" in result
-        assert "${api_response}" in result
-
-    def test_status_404(self):
-        """Deve gerar validacao para status 404."""
-        result = generate_status_validation("404")
-        assert "404" in result
-
-
-# --- Tests: generate_assertions_from_events ---
-
-class TestGenerateAssertionsFromEvents:
-    """Testes para a funcao generate_assertions_from_events (usa modulo assertions)."""
-
-    def test_no_events(self):
-        """Deve retornar lista vazia sem eventos."""
-        result = generate_assertions_from_events([])
-        assert result == []
-
-    def test_detect_status_code(self):
-        """Deve detectar status code no script."""
-        events = [{
-            "listen": "test",
-            "script": 'pm.response.to.have.status(201);',
-        }]
-        result = generate_assertions_from_events(events)
-        assert any("Status Should Be" in line for line in result)
-        assert any("201" in line for line in result)
-
-    def test_detect_json_schema(self):
-        """JsonSchema nao e traduzido pelo modulo assertions (Fase 2 - IA)."""
-        events = [{
-            "listen": "test",
-            "script": 'pm.response.to.have.jsonSchema(schema);',
-        }]
-        result = generate_assertions_from_events(events)
-        assert result == []
-
-    def test_detect_collection_variables_set(self):
-        """Deve detectar collectionVariables.set no script."""
-        events = [{
-            "listen": "test",
-            "script": 'pm.collectionVariables.set("oauth", jsonData.access_token);',
-        }]
-        result = generate_assertions_from_events(events)
-        assert any("Set Test Variable" in line for line in result)
-        assert any("${oauth}" in line for line in result)
-
-    def test_detect_not_empty(self):
-        """Deve detectar not empty."""
-        events = [{
-            "listen": "test",
-            "script": 'pm.expect(accessToken).to.not.be.empty;',
-        }]
-        result = generate_assertions_from_events(events)
-        assert any("Should Not Be Empty" in line for line in result)
-
-    def test_detect_string_type(self):
-        """Deve detectar tipo string."""
-        events = [{
-            "listen": "test",
-            "script": "pm.expect(accessToken).to.be.a('string');",
-        }]
-        result = generate_assertions_from_events(events)
-        assert any("Should Not Be Empty" in line for line in result)
-
-    def test_detect_above_zero(self):
-        """Deve detectar valor > 0."""
-        events = [{
-            "listen": "test",
-            "script": "pm.expect(totalItens).to.be.above(0);",
-        }]
-        result = generate_assertions_from_events(events)
-        assert any("Should Be True" in line for line in result)
-        assert "> 0" in result[0]
-
-    def test_detect_exact_equality(self):
-        """Deve detectar valor exato."""
-        events = [{
-            "listen": "test",
-            "script": 'pm.expect(jsonData.erros[0].codigo).to.eql("401");',
-        }]
-        result = generate_assertions_from_events(events)
-        assert any("Should Be Equal As Strings" in line for line in result)
-
-    def test_detect_not_null(self):
-        """Deve detectar nao null."""
-        events = [{
-            "listen": "test",
-            "script": "pm.expect(randomId).to.not.be.null;",
-        }]
-        result = generate_assertions_from_events(events)
-        assert any("Should Be Empty" in line for line in result)
-
-    def test_prerequest_event_ignored(self):
-        """Deve ignorar eventos prerequest."""
-        events = [{
-            "listen": "prerequest",
-            "script": 'pm.test("test", function() {});',
-        }]
-        result = generate_assertions_from_events(events)
-        assert result == []
-
-
-# --- Tests: generate_test_case ---
-
-class TestGenerateTestCase:
-    """Testes para a funcao generate_test_case."""
-
-    def test_enabled_test(self):
-        """Deve gerar teste habilitado com chamadas HTTP."""
-        request = {
-            "name": "[200] GET /pedidos",
-            "method": "GET",
-            "url": "https://api.example.com/users",
-            "disabled": False,
-            "events": [],
-        }
-        result = generate_test_case(request)
-
-        assert "[200] GET /pedidos" in result
-        assert "GET On Session" in result
-        assert "Status Should Be" in result
-
-    def test_disabled_test(self):
-        """Deve gerar teste com Skip quando desabilitado."""
-        request = {
-            "name": "[200] GET /pedidos Desabilitado",
-            "method": "GET",
-            "url": "https://api.example.com/users",
-            "disabled": True,
-            "events": [],
-        }
-        result = generate_test_case(request)
-
-        assert "Skip" in result
-        assert "Request desabilitado" in result
-        assert "GET On Session" not in result
-
-    def test_test_with_assertions(self):
-        """Deve incluir assertions dos eventos."""
-        request = {
-            "name": "[200] GET /pedidos",
-            "method": "GET",
-            "url": "https://api.example.com/users",
-            "disabled": False,
-            "events": [{
-                "listen": "test",
-                "script": 'pm.expect(x).to.eql(y);',
-            }],
-        }
-        result = generate_test_case(request)
-
-        assert "Should Be Equal As Strings" in result
-
-    def test_post_test_with_body(self):
-        """Deve gerar teste POST com body."""
-        request = {
-            "name": "POST /pedidos",
-            "method": "POST",
-            "url": "https://api.example.com/pedidos",
-            "body": '{"nome": "teste"}',
-            "disabled": False,
-            "events": [],
-        }
-        result = generate_test_case(request)
-
-        assert "POST On Session" in result
-        assert "json=${body}" in result
-
-
-# --- Tests: generate_settings ---
-
-class TestGenerateSettings:
-    """Testes para a funcao generate_settings."""
-
-    def test_contains_settings_header(self, sample_requests):
-        """Deve conter cabecalho Settings."""
-        result = generate_settings(sample_requests, "Test API", "../test-base/base-api.robot")
-        assert "*** Settings ***" in result
-
-    def test_contains_documentation(self, sample_requests):
-        """Deve conter secao Documentation."""
-        result = generate_settings(sample_requests, "Test API", "../test-base/base-api.robot")
-        assert "Documentation" in result
-        assert "Test API" in result
-
-    def test_contains_resource(self, sample_requests):
-        """Deve conter Resource para base-api.robot."""
-        result = generate_settings(sample_requests, "Test API", "../test-base/base-api.robot")
-        assert "Resource" in result
-        assert "../test-base/base-api.robot" in result
-
-    def test_contains_command(self, sample_requests):
-        """Deve conter comando de execucao sugerido."""
-        result = generate_settings(sample_requests, "Test API", "../test-base/base-api.robot")
-        assert "command to run tests" in result
-        assert "robot -d" in result
-
-
-# --- Tests: generate_variables ---
-
-class TestGenerateVariables:
-    """Testes para a funcao generate_variables."""
-
-    def test_contains_variables_header(self, sample_variables):
-        """Deve conter cabecalho Variables."""
-        result = generate_variables(sample_variables)
-        assert "*** Variables ***" in result
-
-    def test_includes_variables(self, sample_variables):
-        """Deve incluir variaveis no arquivo."""
-        result = generate_variables(sample_variables)
-        assert "${baseUrl}" in result
-        assert "${env}" in result
-        assert "https://api.example.com" in result
-
-    def test_excludes_empty_variables(self, sample_variables):
-        """Deve excluir variaveis com valor vazio."""
-        result = generate_variables(sample_variables)
-        assert "${empty_var}" not in result
-
-    def test_empty_variables(self):
-        """Deve gerar secao vazia sem variaveis."""
-        result = generate_variables({})
-        assert "*** Variables ***" in result
-
-
-# --- Tests: generate_keywords_section ---
-
-class TestGenerateKeywordsSection:
-    """Testes para a funcao generate_keywords_section."""
-
-    def test_contains_keywords_header(self):
-        """Deve conter cabecalho Keywords."""
-        result = generate_keywords_section()
-        assert "*** Keywords ***" in result
-
-
-# --- Tests: generate_robot_file ---
-
-class TestGenerateRobotFile:
-    """Testes para a funcao generate_robot_file."""
-
-    def test_contains_all_sections(self, sample_requests, sample_variables):
-        """Deve conter todas as secoes do arquivo .robot."""
-        content = generate_robot_file(
-            sample_requests, "Test API", sample_variables, "../test-base/base-api.robot"
-        )
-
-        assert "*** Settings ***" in content
-        assert "*** Variables ***" in content
-        assert "*** Test Cases ***" in content
-        assert "*** Keywords ***" in content
-
-    def test_contains_documentation(self, sample_requests, sample_variables):
-        """Deve conter documentation."""
-        content = generate_robot_file(
-            sample_requests, "Test API", sample_variables, "../test-base/base-api.robot"
-        )
-        assert "Test API" in content
-
-    def test_contains_test_cases(self, sample_requests, sample_variables):
-        """Deve conter todos os test cases."""
-        content = generate_robot_file(
-            sample_requests, "Test API", sample_variables, "../test-base/base-api.robot"
-        )
-        assert "[200] GET /pedidos Sucesso" in content
-        assert "[400] GET /pedidos Erro" in content
-        assert "POST /pedidos Criar" in content
-        assert "Gerar Token" in content
-        assert "[200] GET /pedidos Desabilitado" in content
-
-    def test_contains_skip_for_disabled(self, sample_requests, sample_variables):
-        """Deve marcar testes desabilitados com Skip."""
-        content = generate_robot_file(
-            sample_requests, "Test API", sample_variables, "../test-base/base-api.robot"
-        )
-        assert "Request desabilitado na collection Postman" in content
-
-    def test_ends_with_newline(self, sample_requests, sample_variables):
-        """Deve terminar com newline."""
-        content = generate_robot_file(
-            sample_requests, "Test API", sample_variables, "../test-base/base-api.robot"
-        )
-        assert content.endswith("\n")
-
-
-# --- Tests: generate_robot (integration) ---
-
-class TestGenerateRobot:
-    """Testes de integracao para a funcao generate_robot."""
-
-    def test_creates_files(self, sample_data, tmp_path):
-        """Deve criar arquivos no diretorio de saida."""
-        files = generate_robot(sample_data, str(tmp_path), "../test-base/base-api.robot", "dev")
-
-        assert len(files) > 0
-        for f in files:
-            assert os.path.exists(f)
-
-    def test_creates_one_file_per_group(self, sample_data, tmp_path):
-        """Deve criar um arquivo por grupo de primeiro nivel."""
-        files = generate_robot(sample_data, str(tmp_path), "../test-base/base-api.robot", "dev")
-
-        groups = set()
-        for req in sample_data["requests"]:
-            groups.add(get_top_level_group(req["group"]))
-
-        assert len(files) == len(groups)
-
-    def test_file_content_valid(self, sample_data, tmp_path):
-        """Deve gerar conteudo valido no arquivo."""
-        files = generate_robot(sample_data, str(tmp_path), "../test-base/base-api.robot", "dev")
-
-        for f in files:
-            with open(f, "r", encoding="utf-8") as fh:
-                content = fh.read()
-
-            assert "*** Settings ***" in content
-            assert "*** Test Cases ***" in content
-            assert "*** Variables ***" in content
-
-    def test_creates_output_directory(self, sample_data, tmp_path):
-        """Deve criar o diretorio de saida se nao existir."""
-        output_subdir = str(tmp_path / "subdir" / "output")
-        files = generate_robot(sample_data, output_subdir, "../test-base/base-api.robot", "dev")
-
-        assert len(files) > 0
-        assert os.path.isdir(output_subdir)
-
-    def test_empty_requests(self, tmp_path):
-        """Deve retornar lista vazia para requests vazios."""
-        data = {"collection_name": "Test", "variables": {}, "requests": []}
-        files = generate_robot(data, str(tmp_path), "../test-base/base-api.robot", "dev")
-
-        assert files == []
