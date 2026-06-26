@@ -48,6 +48,28 @@ def generate_file_name(group_name, prefix=""):
     return f"{prefix}{name}.robot"
 
 
+def generate_api_slug(collection_name):
+    """Gera um slug curto para a API a partir do nome da collection.
+
+    Ex: "API Conecta Pedidos v1.6" -> "conecta-pedidos"
+        "Essilor AppSheet v1.223" -> "essilor-appsheet"
+    """
+    name = unicodedata.normalize("NFKD", collection_name)
+    name = "".join(c for c in name if not unicodedata.combining(c))
+
+    # Remove prefixo "API " e sufixo de versao
+    name = re.sub(r'\s*v\d+(\.\d+)*$', '', name, flags=re.IGNORECASE)
+    name = re.sub(r'^API\s+', '', name, flags=re.IGNORECASE)
+
+    # Converte para slug
+    name = name.strip().lower().replace(" ", "-")
+    name = re.sub(r'[^a-z0-9-]', '', name)
+    name = re.sub(r'-+', '-', name)
+    name = name.strip("-")
+
+    return name
+
+
 def get_env_from_requests(requests):
     """Extrai o ambiente dos requests (dev ou hml)."""
     for req in requests:
@@ -296,9 +318,10 @@ def generate_documentation(requests, collection_name, tipo, keyword_name):
 
     file_name = generate_file_name(get_top_level_group(requests[0]["group"]), "neg-" if tipo == "erro" else "")
     env = get_env_from_requests(requests)
+    api_slug = generate_api_slug(collection_name)
     lines.append(f"...")
     lines.append(f"...        command to run tests:")
-    lines.append(f"...        robot -d results\\{env}-22-06\\{file_name} api-modulo-tracking\\{file_name}")
+    lines.append(f"...        robot -d results\\{api_slug}\\{file_name} {file_name}")
 
     return "\n".join(lines)
 
@@ -396,7 +419,8 @@ def generate_robot_file(requests, collection_name, variables, base_resource, tip
 def generate_robot(data, output_dir, base_resource, environment):
     """Gera os arquivos .robot a partir dos dados parseados.
 
-    Cria dois arquivos por grupo:
+    Cria uma subpasta com o nome da API dentro de output_dir.
+    Dentro dela, dois arquivos por grupo:
       - {grupo}.robot (apenas testes de sucesso)
       - neg-{grupo}.robot (apenas testes de erro)
 
@@ -409,8 +433,6 @@ def generate_robot(data, output_dir, base_resource, environment):
     Returns:
         Lista de caminhos dos arquivos gerados.
     """
-    os.makedirs(output_dir, exist_ok=True)
-
     collection_name = data.get("collection_name", "Sem nome")
     variables = data.get("variables", {})
     baseapi_variables = data.get("baseapi_variables", set())
@@ -419,12 +441,16 @@ def generate_robot(data, output_dir, base_resource, environment):
     if not requests:
         return []
 
+    # Cria subpasta com o nome da API
+    api_slug = generate_api_slug(collection_name)
+    output_dir = os.path.join(output_dir, api_slug)
+    os.makedirs(output_dir, exist_ok=True)
+
     groups = group_requests_by_top_level(requests)
 
     files_created = []
     for group_name, group_requests in groups.items():
 
-        # Separa requests de sucesso e erro
         success_reqs = []
         error_reqs = []
         for req in group_requests:
@@ -434,7 +460,6 @@ def generate_robot(data, output_dir, base_resource, environment):
             else:
                 success_reqs.append(req)
 
-        # Gera arquivo de sucesso
         if success_reqs:
             file_name = generate_file_name(group_name)
             file_path = os.path.join(output_dir, file_name)
@@ -450,7 +475,6 @@ def generate_robot(data, output_dir, base_resource, environment):
             files_created.append(file_path)
             print(f"Gerado: {file_path} ({len(success_reqs)} testes de sucesso)")
 
-        # Gera arquivo de erro
         if error_reqs:
             file_name = generate_file_name(group_name, prefix="neg-")
             file_path = os.path.join(output_dir, file_name)
