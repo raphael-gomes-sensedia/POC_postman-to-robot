@@ -36,8 +36,6 @@ robot/Essilor_backend/
 
 **Collections Postman de entrada**:
 - `API Conecta Pedidos v1.postman_collection.json` (~50 requests, 5 grupos)
-- `API OnBoarding Integração Laboratório - OG.postman_collection.json` (~8 requests, 4 grupos)
-- `MS Rastreabilidade Dev.postman_collection.json` (~10 requests, 5 grupos)
 
 ### 1.3. Coleção Foco da POC
 
@@ -78,10 +76,6 @@ Total: ~30+ cenários de teste, 5 tipos de HTTP method (GET, POST), 5 status cod
 
 Construir uma POC de um **gerador em Python** que, dado um arquivo de collection do Postman (formato v2.1 JSON), produza automaticamente arquivos `.robot` o mais próximo possível de testes escritos manualmente pelo time de QA.
 
-### 2.1. Objetivo Específico
-
-Criar um template para validação e padronização dos testes gerados, de forma que o output do gerador seja aceitável quando seguir os mesmos padrões estruturais dos testes existentes em `Essilor_backend`.
-
 ---
 
 ## 3. Critério de Aceite
@@ -91,7 +85,7 @@ O teste `.robot` gerado será considerado **aceitável** quando:
 1. **Estrutura**: Seguir o mesmo padrão de seções (`*** Settings ***`, `*** Variables ***`, `*** Test Cases ***`, `*** Keywords ***`)
 2. **Resource**: Incluir `Resource  ../api-tests/base-api.robot` na seção Settings
 3. **Documentation**: Incluir documentação multi-linha com nome da API, operações e comando de execução
-4. **Variables**: Todas as variáveis da collection presentes e resolvidas (`{{var}}` -> `${var}`)
+4. **Variables**: Todas as variáveis não existentes e da collection presentes e resolvidas (`{{var}}` -> `${var}`)
 5. **Test Cases**: Cada request do Postman gera um Test Case correspondente
 6. **HTTP**: Método correto (GET/POST/PUT/DELETE), URL resolvida com variáveis, session criada
 7. **Headers**: `client_id` e `access_token` presentes quando exigidos
@@ -104,29 +98,9 @@ O teste `.robot` gerado será considerado **aceitável** quando:
 
 ---
 
-## 4. Escopo
+## 4. Fluxo de Geração
 
-### In Escopo
-
-- Testes de back-end (APIs REST)
-- Parser de Postman Collection v2.1 JSON
-- Geração de arquivos `.robot`
-- Geração de schemas JSON de validação
-- Integração com IA para tarefas que script não cobre
-
-### Fora de Escopo
-
-- Testes de front-end
-- Testes de UI
-- Testes de banco de dados
-- Testes de performance (exceto validação básica de response time)
-- Testes de integração com sistemas externos (exceto APIs HTTP)
-
----
-
-## 5. Fluxo de Geração
-
-### 5.1. Fluxo Geral
+### 4.1. Fluxo Geral
 
 ```
 Postman Collection JSON
@@ -175,7 +149,7 @@ Postman Collection JSON
         + schemas JSON (opcional)
 ```
 
-### 5.2. Regra de Divisão: Computacional vs. IA
+### 4.2. Regra de Divisão: Computacional vs. IA
 
 | 100% Computacional (Script) | IA Necessária (API call) |
 |---|---|
@@ -191,7 +165,7 @@ Postman Collection JSON
 
 **Regra prática**: Se envolve **estrutura** (formato fixo, mapeamento direto) = script. Se envolve **compreensão** (interpretar intenção, decidir contexto, gerar texto significativo) = IA.
 
-### 5.3. Mapeamento Postman -> Robot
+### 4.3. Mapeamento Postman -> Robot
 
 | Postman Field | Robot Equivalent | Tratamento |
 |---|---|---|
@@ -205,9 +179,9 @@ Postman Collection JSON
 
 ---
 
-## 6. Arquitetura
+## 5. Arquitetura
 
-### 6.1. Estrutura do Projeto
+### 5.1. Estrutura do Projeto
 
 ```
 postman-to-robot/
@@ -225,7 +199,7 @@ postman-to-robot/
 └── requirements.txt
 ```
 
-### 6.2. CLI
+### 5.2. CLI
 
 ```bash
 python main.py \
@@ -237,7 +211,7 @@ python main.py \
     --ai-model opencode/oci
 ```
 
-### 6.3. Dependências
+### 5.3. Dependências
 
 ```
 click>=8.0          # CLI interface
@@ -248,9 +222,9 @@ jsonschema>=4.0     # Validação de schemas JSON
 
 ---
 
-## 7. Referências do Projeto Existente
+## 6. Referências do Projeto Existente
 
-### 7.1. Resource Principal: `base-api.robot`
+### 6.1. Resource Principal: `base-api.robot`
 
 Arquivo `robot/Essilor_backend/api-tests/base-api.robot` — contém todas as keywords reutilizáveis que o gerador DEVE aproveitar:
 
@@ -286,88 +260,7 @@ Arquivo `robot/Essilor_backend/api-tests/base-api.robot` — contém todas as ke
 - `@{user_*}` — listas de usuários de teste (login, pwd, cnpj otica, cnpj lab)
 - `${client_id_invalido}`, `${client_secret_invalido}`, `${pwd_invalida}` — dados inválidos para testes de erro
 
-### 7.2. Padrão de Arquivo Robot Existente
-
-**Exemplo 1: `get_health.robot`**
-
-```robot
-*** Settings ***
-Documentation       Teste GET /health _ API Proxy
-...                 - API Produtos Proxy e Adapter
-...                 - API Pedidos  Proxy e Adapter
-...    command to run tests:
-...    robot -d results\unit_test_dev\SGO-get_health api-tests\get_health.robot
-
-Resource        ../api-tests/base-api.robot
-
-***Variables***
-##                              |user login                           |pwd             |cnpj otica       |cnpj lab        |
-@{user_otica_sgo}               proprietario_labminas@teste.com       Essilor@2019     26075599000388    27175413001054
-
-*** Test Cases ***
-GET Health - Perfil Otica - API Produtos Proxy - Com Autenticação JWT [200]
-    GET Health Proxy    @{user_otica}    @{api_produtos_proxy}
-    Validate Header Content Type        application/json
-    Response 200 - Body Vazio
-```
-
-**Exemplo 2: `post_pedido_proxy.robot`**
-
-```robot
-*** Settings ***
-Documentation    Chamada para a API Gestão de Pedidos Proxy v1
-...              Operação POST /orcamentos
-...              Operação POST /pedidos
-...              Consulta o Produto para montar o payload do pedido
-...        command to run tests:
-...        robot -d results\unit_test_dev\post_pedido_proxy api-tests\post_pedido_proxy.robot
-
-Resource        ../api-tests/base-api.robot
-Test Setup        Montar Datas
-
-***Variables***
-${path_orcamentos}      /orcamentos
-${path_pedidos}         /pedidos
-@{produto_surf_digital}          34779420021788H        SURFACAGEM_DIGITAL     MULTIFOCAL      ANTIRREFLEXO   37    ## CRIZAL PREVENCIA
-
-*** Test Cases ***
-POST Pedido - Perfil Otica - Surfacagem Digital
-    Consulta RPL Detalhes do Produto        @{user_otica_sgo}    @{api_produtos_proxy}    @{produto_surf_digital}
-    Montagem do Payload        ${produto_surf_digital}[3]    ${produto_surf_digital}[4]
-    POST Orcamento        @{user_otica_sgo}    @{api_pedidos_proxy}
-    Response 200 - Orcamento
-    POST Pedido           @{user_otica_sgo}    @{api_pedidos_proxy}
-    Response 200 - POST Pedido
-```
-
-**Exemplo 3: `conecta_mfa.robot`**
-
-```robot
-*** Settings ***
-Documentation    [ESSL-3689] [Autenticação] Conecta MFA
-...              Implementção de Autenticação MFA no login do Portal Conecta
-...              Novas operações na API Autenticação JWT 1.0
-...                  Operação POST /mfa/solicitacao
-...                  Operação POST /mfa/token
-...        command to run tests:
-...        robot -d results\dev-12-03\conecta_mfa api-autenticacao-jwt\conecta_mfa.robot
-
-Resource        ../api-tests/base-api.robot
-
-*** Variables ***
-${usuario_qa}            noemy.rosario@sensedia.com
-${otp_valido}                664099       # codigo recebido via email
-
-*** Test Cases ***
-Autenticacao MFA - Login Conecta - Sucesso
-    POST Autenticação /mfa/solicitacao        ${usuario_qa}    ${pwd_teste}
-    Response 200 - /mfa/solicitacao
-    Busca OTP no Email
-    POST Autenticação /mfa/token        ${usuario_qa}    ${codigo_otp_valido}     ${valid_tokenMFA}
-    Response 200 - /mfa/token
-```
-
-### 7.3. Convenções de Nomenclatura
+### 6.2. Convenções de Nomenclatura
 
 - **Arquivos**: `snake_case.robot` (ex: `get_health.robot`, `post_pedido_proxy.robot`)
 - **Test Cases**: `{Metodo} {Endpoint} - {Cenario} [{Status Code}]`
@@ -376,89 +269,9 @@ Autenticacao MFA - Login Conecta - Sucesso
 - **Documentação**: Multi-linha com `...`, incluindo comando de execução sugerido
 - **Comentários**: `##` para comentários de código, `#` para comentários inline
 
-### 7.4. Padrão de Keywords de Resposta
-
-Keywords de validação de resposta seguem o padrão:
-
-```robot
-Response {STATUS} - {DESCRICAO}
-    Status Should Be    {STATUS}    ${api_response}
-
-    ${json_response}=    Set Variable    ${api_response.json()}
-
-    # Validações específicas
-    Should Not Be Empty     ${json_response}[campo_especifico]
-    Should Be Equal As Strings     ${json_response}[campo]    valor_esperado
-    Should Contain          ${json_response}    campo_esperado
-
-    Validate Json By Schema File    ${json_response}    ${EXECDIR}/schemas/schema.json
-```
-
-### 7.5. Schemas JSON Existentes
-
-**`error_response_schema.json`** — padrão de erro da API:
-```json
-{
-  "type": "array",
-  "minItems": 1,
-  "items": {
-    "type": "object",
-    "required": ["codigo", "mensagem"],
-    "properties": {
-      "codigo": { "type": "string", "minLength": 3 },
-      "mensagem": { "type": "string", "minLength": 10 }
-    }
-  }
-}
-```
-
-**`autenticacao_jwt.json`** — padrão de resposta JWT:
-```json
-{
-  "type": "object",
-  "required": ["access_token", "token_type", "expires_in"],
-  "properties": {
-    "access_token": { "type": "string" },
-    "token_type": { "type": "string" },
-    "expires_in": { "type": "number" }
-  }
-}
-```
-
 ---
 
-## 8. Mapeamento de Assertions: Postman JS -> Robot Framework
-
-### 8.1. Assertions Básicas (100% Computacional)
-
-| Postman JS | Robot Framework |
-|---|---|
-| `pm.response.to.have.status(200)` | `Status Should Be    200    ${api_response}` |
-| `pm.expect(x).to.not.be.empty` | `Should Not Be Empty    ${x}` |
-| `pm.expect(x).to.be.null` | `Should Be Empty    ${x}` |
-| `pm.expect(x).to.eql(y)` | `Should Be Equal As Strings    ${x}    ${y}` |
-| `pm.expect(x).to.be.a('string')` | `Should Not Be Empty    ${x}` |
-| `pm.expect(x).to.be.a('number')` | `Should Be Equal As Numbers    ${x}` |
-| `pm.expect(x).to.contain(y)` | `Should Contain    ${x}    ${y}` |
-| `pm.expect(pm.response.text()).to.be.empty` | `Should Be Empty    ${api_response.content}` |
-| `pm.expect(x).to.be.above(0)` | `Should Be True    ${x} > 0` |
-| `pm.collectionVariables.set("key", value)` | `Set Test Variable    ${key}    ${value}` |
-| `pm.environment.set("key", value)` | `Set Test Variable    ${key}    ${value}` |
-
-### 8.2. Assertions Complexas (Precisa de IA)
-
-| Postman JS | Tratamento |
-|---|---|
-| `pm.expect(pm.response.code).to.be.oneOf([200,206])` | IA decide: gerar `Run Keyword And Continue On Failure` múltiplos ou usar `Should Be One Of` |
-| `pm.response.to.have.jsonSchema(jsonSchema)` | IA extrai o schema inline e gera `Validate Json By Schema File` |
-| `pm.expect(jsonData.erros[0].codigo).to.eql("401")` | Computacional: mapeamento direto |
-| `if (totalItens > 0) { ... }` | IA traduz para `IF ... END` no Robot |
-| `Math.floor(Math.random() * totalItens)` | IA traduz para lógica Robot equivalente |
-| `pm.test("Nome do teste", function(){...})` | IA decide se cria Test Case separado ou integra ao existente |
-
----
-
-## 9. Plano de Desenvolvimento
+## 7. Plano de Desenvolvimento
 
 ### Fase 1: Gerador Básico (5 dias)
 
@@ -558,72 +371,3 @@ Response {STATUS} - {DESCRICAO}
    - Nomes de arquivo consistentes (`snake_case.robot`)
    - Comando de execução sugerido nos arquivos
    - Tratamento de coleções com variáveis não resolvidas (warning + fallback)
-
-**Critério de Aceite**: Score >= 8/10 no template de validação.
-
----
-
-## 10. Estimativa Total da POC
-
-| Fase | Dias |
-|---|---|
-| Fase 1: Gerador Básico | 5 dias |
-| Fase 2: IA Integration | 3 dias |
-| Fase 3: Validação e Refinamento | 3 dias |
-| **Total** | **~11 dias (2-3 semanas)** |
-
----
-
-## 11. Prompt Templates para IA
-
-### 11.1. Extração de Schema JSON
-
-```
-Você é um especialista em JSON Schema. Dado o seguinte código JavaScript extraído
-de um teste Postman, extraia o objeto JSON schema e retorne APENAS o JSON válido.
-
-Código JavaScript:
-{SCRIPT_JS}
-
-Retorne apenas o JSON, sem markdown, sem explicações.
-```
-
-### 11.2. Tradução de Assertions Complexas
-
-```
-Você é um especialista em Robot Framework. Dada a seguinte assertion do Postman,
-traduza para o equivalente em Robot Framework.
-
-Postman assertion:
-{ASSERTION_JS}
-
-Retorne APENAS a linha(s) de código Robot Framework equivalente.
-```
-
-### 11.3. Escolha de Keyword Robot
-
-```
-Você é um especialista em Robot Framework para testes de API. Dado o seguinte
-cenário de teste, qual keyword Robot é mais adequada?
-
-Descrição do teste: {TEST_DESCRIPTION}
-Status code esperado: {STATUS_CODE}
-Tipo de resposta: {RESPONSE_TYPE}
-
-Keywords disponíveis:
-{AVAILABLE_KEYWORDS}
-
-Retorne apenas o nome da keyword mais adequada.
-```
-
----
-
-## 12. Riscos e Mitigações
-
-| Risco | Impacto | Mitigação |
-|---|---|---|
-| IA falha na extração de schema | Testes sem validação de schema | Fallback: gerar placeholder com `# TODO: schema manual` |
-| Variáveis de ambiente não resolvidas | Testes gerados falham | Manter como `${var}` e gerar warning |
-| Scripts JS muito complexos | IA não traduz corretamente | Marcar como `# TODO: manual review` |
-| Coleções futuras com estrutura diferente | Gerador quebra | Parser com validação de schema + graceful degradation |
-| Custo de IA na POC | Limitado ao escopo | Usar opencode/oci, ~50 chamadas na POC |
