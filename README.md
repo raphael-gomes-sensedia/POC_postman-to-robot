@@ -13,7 +13,6 @@ O gerador preserva a estrutura, variáveis, autenticação, assertions e documen
 ```
 postman-to-robot/
 ├── main.py                    # Entry point (CLI com click)
-├── config.py                  # Configurações padrão
 ├── requirements.txt           # Dependências Python
 ├── .gitignore
 │
@@ -21,33 +20,29 @@ postman-to-robot/
 │   └── API Conecta Pedidos v1.postman_collection.json
 │
 ├── output/                    # Arquivos .robot gerados (saída)
-│   ├── f000_autenticacao.robot
-│   ├── f001_get_pedidos.robot
-│   ├── f002_get_pedidos_id.robot
-│   ├── f003_post_integracao_laboratorio.robot
-│   └── fluxo_integracao_laboratorio.robot
 │
-├── test-base/                 # Base de keywords reutilizáveis
-│   └── base-api.robot
+├── .opencode/                 # Configuração opencode
+│   ├── agents/                # Agentes opencode
+│   │   ├── postman-to-robot-orchestrator.md
+│   │   ├── robot-pattern-analyzer.md
+│   │   ├── robot-test-writer.md
+│   │   └── robot-structure-organizer.md
+│   ├── skills/                # Skills
+│   │   ├── robot-framework-knowledge/
+│   │   └── robot-test-pattern/
+│   └── context/               # Contexto do base-api.robot
+│       └── base-api.robot
 │
-├── doc/                       # Documentação do projeto
-│   ├── POC-GERADOR-TESTES-ROBOT.md
-│   └── TEMPLATE-VALIDACAO.md
-│
-├── service/                   # Módulos do gerador
+├── service/                   # Módulos do gerador (parte determinística)
 │   ├── parser.py              # Parse da collection Postman
-│   ├── generator.py           # Geração dos arquivos .robot
-│   ├── assertions.py          # Tradução de assertions Postman → Robot
-│   ├── ai_helper.py           # Wrapper para IA (Fase 2)
-│   └── config.py
+│   ├── generator.py           # Geração do esqueleto .robot
+│   └── assertions.py          # Tradução de assertions Postman → Robot
 │
 ├── tests/                     # Testes unitários (pytest)
 │   ├── __init__.py
-│   ├── test_parser.py         # 44 testes
-│   ├── test_generator.py      # 65 testes
-│   └── test_assertions.py     # 65 testes
-│
-└── templates/                 # Templates Jinja2 (próxima fase)
+│   ├── test_parser.py
+│   ├── test_generator.py
+│   └── test_assertions.py
 ```
 
 ## Dependências
@@ -57,9 +52,6 @@ postman-to-robot/
 | Pacote | Versão | Uso |
 |---|---|---|
 | `click` | >=8.0 | Interface CLI |
-| `jinja2` | >=3.1 | Templates (Fase 2) |
-| `openai` | >=1.0 | IA (Fase 2) |
-| `jsonschema` | >=4.0 | Validação de schemas |
 | `pytest` | >=7.0 | Testes unitários |
 
 ### Robot Framework (para executar os testes gerados)
@@ -103,15 +95,22 @@ pip install robotframework-requests robotframework-jsonlibrary robotframework-im
 
 ## Como Usar
 
-### Gerar testes a partir de uma collection Postman
+### Gerar esqueleto .robot (parte determinística)
 
 ```powershell
 python main.py ^
     --input "input/API Conecta Pedidos v1.postman_collection.json" ^
     --output "output" ^
-    --base-resource "test-base/base-api.robot" ^
-    --env dev
+    --base-resource "../api-tests/base-api.robot"
 ```
+
+### Preencher keywords via agente opencode (parte não-determinística)
+
+Após gerar os esqueletos, o orquestrador opencode preenche keywords, validações e schemas:
+
+1. Inicie o orquestrador: `opencode` no diretório do projeto
+2. O orquestrador perguntará qual Collection converter
+3. Execute os passos guiados pelo orquestrador
 
 ### Parâmetros CLI
 
@@ -119,10 +118,7 @@ python main.py ^
 |---|---|---|---|
 | `--input` | Sim | — | Caminho para o arquivo da collection Postman (JSON) |
 | `--output` | Sim | — | Diretório de saída para os arquivos `.robot` |
-| `--base-resource` | Não | `test-base/base-api.robot` | Caminho para o `base-api.robot` |
-| `--env` | Não | `dev` | Ambiente (`dev` ou `hml`) |
-| `--ai-api` | Não | `opencode` | Provedor de IA (`opencode`, `openai`) |
-| `--ai-model` | Não | `opencode/oci` | Modelo de IA |
+| `--base-resource` | Não | `../api-tests/base-api.robot` | Caminho relativo para o `base-api.robot` |
 
 ### Executar os testes gerados
 
@@ -145,47 +141,43 @@ robot -d results output\f000_autenticacao.robot
 Postman Collection JSON
          │
          ▼
-┌─────────────────────────────────┐
-│ FASE 1: 100% COMPUTACIONAL      │
-│ (Script Python)                 │
-│                                 │
-│ • Parsear JSON                  │
-│ • Navegar estrutura aninhada    │
-│ • Extrair method, URL, headers  │
-│ • Resolver {{variaveis}}        │
-│ • Gerar Settings, Variables     │
-│ • Gerar chamadas HTTP           │
-│ • Gerar assertions básicas      │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│ FASE 2: IA NECESSÁRIA           │
-│ (API call - OpenAI)             │
-│                                 │
-│ • Extrair schemas JSON inline   │
-│   do JavaScript                 │
-│ • Traduzir lógica complexa      │
-│   (if/else, loops, Math.)       │
-│ • Decidir keyword Robot         │
-│   mais adequada                 │
-│ • Gerar documentação legível    │
-│ • Decidir quando Skip           │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│ FASE 3: 100% COMPUTACIONAL      │
-│ (Script Python)                 │
-│                                 │
-│ • Montar arquivo .robot final   │
-│ • Salvar schemas JSON           │
-│ • Escrever no filesystem        │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-        .robot files gerados
-        + schemas JSON (opcional)
+┌───────────────────────────────────────────────┐
+│ 1. SCRIPTS PYTHON (parte determinística)      │
+│                                                │
+│ • Parsear JSON (parser.py)                    │
+│ • Navegar estrutura aninhada                  │
+│ • Extrair method, URL, headers, body, auth    │
+│ • Resolver {{variaveis}} com valores reais    │
+│ • Separar requests por grupo (F001, F002...)  │
+│ • Separar sucesso/erro por status code        │
+│ • Gerar esqueleto .robot:                     │
+│   - *** Settings *** (Resource, Documentation)│
+│   - *** Variables *** (collection vars)        │
+│   - *** Test Cases *** (apenas nomes)         │
+│   - *** Keywords *** (vazio para LLM)         │
+└──────────────────────┬────────────────────────┘
+                       │
+                       ▼
+┌───────────────────────────────────────────────┐
+│ 2. AGENTES OPENCODE (parte não-determinística)│
+│                                                │
+│ • Carregar skills e contexto base-api.robot   │
+│ • Identificar tipo de autenticação            │
+│ • Mapear API para @{api_*} do base-api        │
+│ • Mapear path para ${oper_*} do base-api      │
+│ • Criar keywords de ação (POST/GET Sucesso)   │
+│ • Criar keywords de validação (Response 200)  │
+│ • Montar headers (JWT, client_id, lab)        │
+│ • Adicionar validações (schema, campos)       │
+│ • Extrair schemas JSON dos test scripts       │
+│ • Extrair payloads para resources/            │
+│ • Traduzir assertions Postman → Robot         │
+└──────────────────────┬────────────────────────┘
+                       │
+                       ▼
+              .robot files completos
+              + schemas/*.json
+              + resources/*.json
 ```
 
 ### Mapeamento Postman → Robot Framework
