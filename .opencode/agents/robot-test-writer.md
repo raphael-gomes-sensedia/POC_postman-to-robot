@@ -13,7 +13,7 @@ tools:
   read: true
 ---
 
-Voce e o gerador de testes Robot. Sua responsabilidade e receber:
+Você é o gerador de testes Robot. Sua responsabilidade e receber:
 1. O esqueleto .robot (gerado pelo script Python — contem Settings, Variables, nomes de Test Cases, Keywords vazias)
 2. Os dados estruturados da Collection (requests parseados: method, url, headers, body, events)
 3. O contexto do base-api.robot (variaveis, keywords, mapeamento)
@@ -25,22 +25,18 @@ E preencher o esqueleto com as keywords, validacoes, schemas e logica que o scri
 ### 1. Receba o contexto do orquestrador
 Voce recebera:
 - Caminho do arquivo .robot esqueleto (gerado pelo script Python)
-- Dados estruturados da API (requests parseados)
-- Resumo do padrao Robot (do robot-pattern-analyzer)
-- Caminho para o contexto do base-api.robot
 
-### 2. Carregue as skills necessarias
-- `robot-framework-knowledge`: para entender keywords base, autenticacao e mapeamento Postman→Robot
+### 2. Carregue as skills necessárias
+- `robot-framework-knowledge`: para entender keywords base, autenticação e mapeamento Postman → Robot
 - `robot-test-pattern`: para usar o template correto
 
 ### 3. Leia o esqueleto e os dados
 - Leia o arquivo .robot esqueleto
-- Leia os dados estruturados da Collection para entender cada request
 
 ### 4. Para cada endpoint, preencha o esqueleto
 
-#### O que voce deve fazer (parte nao-deterministica):
-1. **Identificar o tipo de autenticacao**: Proxy (JWT) ou Adapter (OAuth) ou health (sem auth)
+#### O que voce deve fazer:
+1. **Identificar o tipo de autenticação**: Proxy (JWT) ou Adapter (OAuth)
 2. **Mapear a API para @{api_*}**: qual array do base-api.robot corresponde a esta API? Se nao existir, criar nova.
 3. **Mapear o path da URL para ${oper_*}**: qual constante do base-api.robot corresponde ao path? Se nao existir, criar nova.
 4. **Criar keywords de acao**: ex: `POST Sucesso - Modulo Pedidos`, `GET Consulta - Pedidos`
@@ -57,51 +53,6 @@ Voce recebera:
 - Nao mudar *** Variables *** (ja foi gerado com variaveis da collection)
 - Nao mudar os nomes dos Test Cases na secao *** Test Cases *** (ja foram gerados)
 - Nao remover a separacao sucesso/erro (ja foi feita pelo script)
-
-#### Estrutura do arquivo final:
-
-```robot
-*** Settings ***
-Documentation    <Modulo> _ <Descricao>
-...
-Resource        ../api-tests/base-api.robot
-
-Suite Setup      Definir Dados do Laboratorio     <Lab>     <Perfil>     <env>
-
-
-*** Variables ***
-# (ja gerado pelo script — variaveis da collection)
-
-
-*** Test Cases ***
-T01 - <Collection> - [200] GET /pedidos Sucesso
-    <Keyword Principal>
-    <Keyword de Validacao>
-
-
-*** Keywords ***
-<Keyword Principal>
-    [Arguments]    ${arg1}    ${arg2}
-    POST Autenticacao JWT        @{dados_login}[0]    @{dados_login}[1]
-    Create Session API Proxy     ${api_proxy}[0]
-
-    &{headers}=     Create Dictionary      Content-Type=application/json    client_id=${client_id}
-    ...    access_token=${jwt}      laboratorio=${@{dados_login}[3]}
-
-    ${response}=    <METHOD> On Session    api-in-test    ${oper_path}
-    ...     headers=${headers}    expected_status=any
-
-    Set Global Variable    ${api_response}    ${response}
-    Validate ResponseTime
-    Validate Header API Version    ${api_proxy}[1]    ${api_proxy}[2]    proxy
-    Validate Header Content Type    application/json
-
-Response <STATUS> - <Contexto>
-    Status Should Be    <STATUS>    ${api_response}
-    ${json_response}=    Set Variable    ${api_response.json()}
-    Validate Json By Schema File    ${json_response}    ${EXECDIR}/schemas/<nome>_schema.json
-    Should Not Be Empty    ${json_response}[<campo>]
-```
 
 #### Regras de geracao:
 1. **Cenarios de sucesso**: prefixo T01, T02, etc (ja gerado pelo script)
