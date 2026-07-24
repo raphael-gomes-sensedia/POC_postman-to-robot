@@ -1,7 +1,8 @@
-# Output
+# archives
 output/
-results
-reference
+results/
+reference/
+input
 
 # Python
 __pycache__/

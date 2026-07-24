@@ -1,23 +1,19 @@
-"""Gerador de arquivos .robot a partir de dados parseados.
+"""Gerador de esqueleto de arquivos .robot a partir de dados parseados.
 
-Responsável por:
-- Agrupar requests por pasta de primeiro nivel
-- Gerar secao Settings com Resource para base-api.robot
-- Gerar secao Variables com variaveis resolvidas
-- Gerar secao Test Cases com um caso por request
-- Gerar 1 arquivo .robot por grupo de primeiro nivel
+Responsavel por (parte deterministica):
+- Separar requests por grupo de primeiro nivel
+- Separar requests de sucesso e erro por status code
+- Gerar as secoes Settings, Variables e nomes de Test Cases
+- Gerar esqueleto vazio de Keywords (preenchido posteriormente pela LLM)
 """
 
 import os
 import re
+import unicodedata
 
 
 def get_top_level_group(group_path):
-    """Extrai o grupo de primeiro nivel do caminho completo.
-
-    Ex: "[F001] GET /pedidos / Sucesso [200,206] / [200] GET ..."
-    Retorna: "[F001] GET /pedidos"
-    """
+    """Extrai o grupo de primeiro nivel do caminho completo."""
     parts = group_path.split(" / ")
     if parts and parts[0]:
         return parts[0]
@@ -25,10 +21,7 @@ def get_top_level_group(group_path):
 
 
 def group_requests_by_top_level(requests):
-    """Agrupa requests pelo grupo de primeiro nivel.
-
-    Retorna um dicionario: {grupo_top: [requests]}
-    """
+    """Agrupa requests pelo grupo de primeiro nivel."""
     groups = {}
     for req in requests:
         top_group = get_top_level_group(req["group"])
@@ -38,246 +31,209 @@ def group_requests_by_top_level(requests):
     return groups
 
 
-def generate_file_name(group_name):
+def generate_file_name(group_name, prefix=""):
     """Gera o nome do arquivo .robot a partir do nome do grupo.
 
-    Ex: "[F001] GET /pedidos" -> "f001_get_pedidos.robot"
+    Se prefix for "neg-", gera "neg-f001_get_pedidos.robot"
     """
-    import unicodedata
-    # Normaliza e remove acentos
     name = unicodedata.normalize("NFKD", group_name)
     name = "".join(c for c in name if not unicodedata.combining(c))
-    # Remove colchetes
     name = name.replace("[", "").replace("]", "")
-    # Substitui caracteres nao alfanumericos por underscore
     name = "".join(c if c.isalnum() or c == " " else "_" for c in name)
-    # Converte para lowercase e substitui espacos por underscore
     name = name.lower().replace(" ", "_")
-    # Remove underscores extras
     while "__" in name:
         name = name.replace("__", "_")
     name = name.strip("_")
-    return f"{name}.robot"
+    return f"{prefix}{name}.robot"
 
 
-def get_env_from_requests(requests):
-    """Extrai o ambiente dos requests (dev ou hml)."""
-    for req in requests:
-        url = req.get("url", "")
-        if "/hml/" in url:
-            return "hml"
-    return "dev"
+def generate_api_slug(collection_name):
+    """Gera um slug curto para a API a partir do nome da collection.
 
-
-def generate_documentation(requests, collection_name):
-    """Gera a secao Documentation multi-linha.
-
-    Inclui nome da API, operacoes e comando de execucao.
+    Ex: "API Conecta Pedidos v1.6" -> "conecta-pedidos"
+        "Essilor AppSheet v1.223" -> "essilor-appsheet"
     """
-    lines = []
-    lines.append(f"Documentation    {collection_name}")
+    name = unicodedata.normalize("NFKD", collection_name)
+    name = "".join(c for c in name if not unicodedata.combining(c))
 
-    seen = set()
-    for req in requests:
-        test_name = req["name"]
-        if test_name not in seen:
-            seen.add(test_name)
-            lines.append(f"...              {test_name}")
+    name = re.sub(r'\s*v\d+(\.\d+)*$', '', name, flags=re.IGNORECASE)
+    name = re.sub(r'^API\s+', '', name, flags=re.IGNORECASE)
 
-    file_name = generate_file_name(get_top_level_group(requests[0]["group"]))
-    env = get_env_from_requests(requests)
-    lines.append(f"...        command to run tests:")
-    lines.append(f"...        robot -d results\\unit_test_{env}\\{file_name} {file_name}")
+    name = name.strip().lower().replace(" ", "-")
+    name = re.sub(r'[^a-z0-9-]', '', name)
+    name = re.sub(r'-+', '-', name)
+    name = name.strip("-")
 
-    return "\n".join(lines)
-
-
-def generate_settings(requests, collection_name, base_resource):
-    """Gera a secao *** Settings *** do arquivo .robot."""
-    lines = []
-    lines.append("*** Settings ***")
-    lines.append(generate_documentation(requests, collection_name))
-    lines.append("")
-    lines.append(f"Resource        {base_resource}")
-    lines.append("")
-    return "\n".join(lines)
-
-
-def generate_variables(variables):
-    """Gera a secao *** Variables *** com variaveis da collection."""
-    lines = []
-    lines.append("*** Variables ***")
-
-    for key, value in variables.items():
-        if value:
-            lines.append(f"${{{key}}}    {value}")
-
-    lines.append("")
-    return "\n".join(lines)
+    return name
 
 
 def extract_status_code(name):
-    """Extrai o status code do nome do teste.
-
-    Ex: "[200] GET /pedidos" -> "200"
-    Ex: "[400] GET /pedidos Erro" -> "400"
-    """
+    """Extrai o status code do nome do teste."""
     match = re.search(r"\[(\d{3})\]", name)
     if match:
         return match.group(1)
     return None
 
 
-def generate_create_session(request):
-    """Gera a keyword Create Session baseada no metodo e auth."""
-    auth = request.get("auth")
-
-    if auth and auth == "basic":
-        return "    Create Session API Oauth"
-
-    return "    Create Session API Proxy"
-
-
-def generate_http_call(request):
-    """Gera a chamada HTTP baseada no metodo."""
-    method = request["method"].upper()
-    url = request["url"]
-
-    method_map = {
-        "GET": "GET On Session",
-        "POST": "POST On Session",
-        "PUT": "PUT On Session",
-        "DELETE": "DELETE On Session",
-        "PATCH": "PATCH On Session",
-    }
-
-    keyword = method_map.get(method, "GET On Session")
-    line = "    ${api_response}=    " + keyword + "    api-in-test    " + url + "    expected_status=any"
-
-    if request.get("body"):
-        body = request["body"]
-        if isinstance(body, str):
-            line += "    json=${body}    "
-        else:
-            line += "    data="
-
-    return line
+def is_error_status(status_code):
+    """Verifica se o status code indica erro (4xx ou 5xx)."""
+    if not status_code:
+        return False
+    try:
+        code = int(status_code)
+        return 400 <= code < 600
+    except ValueError:
+        return False
 
 
-def generate_save_response():
-    """Gera a keyword para salvar a resposta em variavel."""
-    return ""
-
-
-def generate_status_validation(status_code):
-    """Gera a validacao de status code."""
-    return "    Status Should Be    " + status_code + "    ${api_response}"
-
-
-def generate_assertions_from_events(events):
-    """Gera assertions a partir dos eventos (test scripts) do Postman.
-
-    Usa o modulo assertions para traduzir as assertions do Postman JS
-    para Robot Framework.
-    """
-    from service.assertions import parse_assertions
-    return parse_assertions(events)
-
-
-def generate_test_case(request):
-    """Gera um Test Case Robot a partir de um request parseado."""
+def generate_documentation(requests, collection_name, tipo, file_name, api_slug):
+    """Gera a secao Documentation multi-linha."""
     lines = []
+    lines.append(f"Documentation    {collection_name} - {tipo}")
 
-    name = request["name"]
-    method = request["method"]
+    seen = set()
+    for req in requests:
+        test_name = req["name"]
+        if test_name not in seen:
+            seen.add(test_name)
+            lines.append(f"...              - {test_name}")
 
-    if request["disabled"]:
-        lines.append(f"{name}    Skip    Request desabilitado na collection Postman")
-        lines.append("")
-        return "\n".join(lines)
+    lines.append(f"...")
+    lines.append(f"...        command to run tests:")
+    lines.append(f"...        robot -d results\\{api_slug}\\{file_name} {file_name}")
 
-    test_name = f"{method} {name}"
-    lines.append(test_name)
+    return "\n".join(lines)
 
-    lines.append(generate_create_session(request))
-    lines.append(generate_http_call(request))
-    lines.append(generate_save_response())
 
-    status_code = extract_status_code(name)
-    if status_code:
-        lines.append(generate_status_validation(status_code))
+def generate_settings(requests, collection_name, tipo, file_name, api_slug):
+    """Gera a secao *** Settings *** do arquivo .robot."""
+    lines = []
+    lines.append("*** Settings ***")
+    lines.append(generate_documentation(requests, collection_name, tipo, file_name, api_slug))
+    lines.append("")
+    lines.append("Resource        ../api-tests/base-api.robot")
+    lines.append("")
+    return "\n".join(lines)
 
-    lines.extend(generate_assertions_from_events(request["events"]))
+
+def generate_variables(collection_variables):
+    """Gera secao *** Variables *** com as variaveis da collection."""
+    lines = []
+    lines.append("*** Variables ***")
+
+    for key, value in collection_variables.items():
+        if not value:
+            continue
+        lines.append(f"${{{key}}}    {value}")
 
     lines.append("")
     return "\n".join(lines)
 
 
-def generate_keywords_section():
-    """Gera a secao *** Keywords *** (vazia por enquanto)."""
-    return "*** Keywords ***"
+def generate_robot_file(requests, collection_name, variables, tipo, file_name, api_slug):
+    """Gera o esqueleto de um arquivo .robot.
 
+    Args:
+        requests: requests do grupo
+        collection_name: nome da collection
+        variables: variaveis da collection
+        tipo: "sucesso" ou "erro"
+        file_name: nome do arquivo
+        api_slug: slug da API para o comando de execucao
 
-def generate_robot_file(requests, collection_name, variables, base_resource):
-    """Gera o conteudo completo de um arquivo .robot.
-
-    Retorna a string com todo o conteudo do arquivo.
+    Returns:
+        String com o conteudo do arquivo.
     """
     sections = []
 
-    sections.append(generate_settings(requests, collection_name, base_resource))
+    sections.append(generate_settings(requests, collection_name, tipo, file_name, api_slug))
+
     sections.append(generate_variables(variables))
+
     sections.append("*** Test Cases ***")
+    for i, req in enumerate(requests, 1):
+        seq_str = f"T{i:02d}"
+        test_name = f"{seq_str} - {collection_name} - {req['name']}"
+        sections.append(test_name)
+        sections.append(f"    # Keyword sera inserida pelo agente LLM")
+        sections.append("")
 
-    for req in requests:
-        sections.append(generate_test_case(req))
-
-    sections.append(generate_keywords_section())
+    sections.append("*** Keywords ***")
+    sections.append("# Keywords serao inseridas pelo agente LLM com base no contexto")
+    sections.append("# do base-api.robot e nos padroes do time")
+    sections.append("")
 
     return "\n".join(sections) + "\n"
 
 
-def generate_robot(data, output_dir, base_resource, environment):
-    """Gera os arquivos .robot a partir dos dados parseados.
+def generate_robot(data, output_dir):
+    """Gera os arquivos .robot (esqueleto) a partir dos dados parseados.
 
-    Cria um arquivo .robot por grupo de primeiro nivel.
+    Cria uma subpasta com o nome da API dentro de output_dir.
+    Dentro dela, dois arquivos por grupo:
+      - {grupo}.robot (apenas testes de sucesso)
+      - neg-{grupo}.robot (apenas testes de erro)
 
     Args:
-        data: dicionario retornado por parse_collection com:
-              - collection_name: nome da collection
-              - variables: dicionario de variaveis
-              - requests: lista de requests parseados
+        data: dicionario retornado por parse_collection
         output_dir: diretorio de saida
-        base_resource: caminho para o base-api.robot
-        environment: ambiente (dev, hml)
 
     Returns:
         Lista de caminhos dos arquivos gerados.
     """
-    os.makedirs(output_dir, exist_ok=True)
-
     collection_name = data.get("collection_name", "Sem nome")
     variables = data.get("variables", {})
     requests = data.get("requests", [])
+
+    if not requests:
+        return []
+
+    api_slug = generate_api_slug(collection_name)
+    output_dir = os.path.join(output_dir, api_slug)
+    os.makedirs(output_dir, exist_ok=True)
 
     groups = group_requests_by_top_level(requests)
 
     files_created = []
     for group_name, group_requests in groups.items():
-        file_name = generate_file_name(group_name)
-        file_path = os.path.join(output_dir, file_name)
 
-        content = generate_robot_file(
-            group_requests,
-            collection_name,
-            variables,
-            base_resource,
-        )
+        success_reqs = []
+        error_reqs = []
+        for req in group_requests:
+            sc = extract_status_code(req["name"])
+            if sc and is_error_status(sc):
+                error_reqs.append(req)
+            else:
+                success_reqs.append(req)
 
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(content)
+        if success_reqs:
+            file_name = generate_file_name(group_name)
+            file_path = os.path.join(output_dir, file_name)
 
-        files_created.append(file_path)
-        print(f"Gerado: {file_path} ({len(group_requests)} testes)")
+            content = generate_robot_file(
+                success_reqs, collection_name, variables,
+                "sucesso", file_name, api_slug
+            )
+
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            files_created.append(file_path)
+            print(f"Esqueleto gerado: {file_path} ({len(success_reqs)} testes de sucesso)")
+
+        if error_reqs:
+            file_name = generate_file_name(group_name, prefix="neg-")
+            file_path = os.path.join(output_dir, file_name)
+
+            content = generate_robot_file(
+                error_reqs, collection_name, variables,
+                "erro", file_name, api_slug
+            )
+
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            files_created.append(file_path)
+            print(f"Esqueleto gerado: {file_path} ({len(error_reqs)} testes de erro)")
 
     return files_created
