@@ -1,9 +1,9 @@
-"""Testes unitários para o parser de Postman Collection.
+"""Testes unitarios para o parser de Postman Collection.
 
 Abrange:
 - parse_collection com filtro F000 (autenticacao)
-- extract_baseapi_catalog
 - is_auth_group / should_skip_group
+- Funcoes de extracao e resolucao de dados
 """
 
 import json
@@ -17,37 +17,12 @@ from service.parser import (
     extract_headers,
     extract_body,
     extract_auth,
-    is_request_disabled,
     parse_request,
     parse_collection_items,
     parse_collection,
     is_auth_group,
     should_skip_group,
 )
-
-
-# --- Fixtures ---
-
-BASEAPI_ROBOT_CONTENT = """*** Variables ***
-${client_id}        3b98e212-cc00-3deb-b2d9-2c7dfb7d2ca5
-${client_secret}    5876deaa-e1f4-3951-a1bd-f0737e934c23
-${oper_token}       /token
-${oper_oauth}       /access-token?grant_type=client_credentials
-@{api_pedidos_proxy}        gestao-pedidos-laboratorio                v1.107        v1.104
-@{api_produtos_proxy}       gestao-produtos-laboratorio               v1.31         v1.30
-@{api_conecta_pedidos}      conecta-pedidos                 v1.4          v1.4
-@{user_adm_essilor}            administrador_essilor@teste.com       Essilor@2019
-@{user_lab_og}                 user_alliance@teste.com               Essilor@2019
-
-*** Keywords ***
-Create Session API Proxy
-    [Arguments]         ${api}
-    Create Session      api-in-test     https://api.essilor.com.br/${env}/${api}/v1
-
-POST Autenticacao JWT
-    [Arguments]         ${usuario}     ${senha}
-    Create Session API Proxy      ${api_auth_jwt}[0]
-"""
 
 
 @pytest.fixture
@@ -161,7 +136,6 @@ class TestIsAuthGroup:
         assert is_auth_group("") is False
 
     def test_utils_with_auth_child(self):
-        # Utils so deve ser ignorado se o nome da pasta for explicitamente de auth
         assert is_auth_group("Utils") is False
 
     def test_autenticacao_case_insensitive(self):
@@ -189,7 +163,6 @@ class TestShouldSkipGroup:
         assert should_skip_group("Utils") is False
 
     def test_skip_api_autenticacao(self):
-        # Nome que contem "Autenticacao"
         assert should_skip_group("API Autenticacao JWT v1") is True
 
     def test_keep_gestao_pedidos(self):
@@ -202,20 +175,16 @@ class TestParseCollectionItemsComSkip:
     """Testes para parse_collection_items com skip de grupos de auth."""
 
     def test_skips_f000_group(self, sample_collection):
-        """Deve pular requests dentro de [F000] Autenticacao."""
         variables = extract_variables(sample_collection)
         results = []
         parse_collection_items(sample_collection["item"], "", variables, results)
-        # Apenas [F001] GET /pedidos deve ser incluido
         assert len(results) == 1
         assert results[0]["name"] == "[200] GET /pedidos Sucesso"
 
     def test_skips_auth_inside_utils(self, collection_with_auth_pastas):
-        """Deve pular requests em pastas de autenticacao aninhadas."""
         variables = extract_variables(collection_with_auth_pastas)
         results = []
         parse_collection_items(collection_with_auth_pastas["item"], "", variables, results)
-        # So deve ter o request de [F001] GET /pedidos
         assert len(results) == 1
         assert "[200] GET /pedidos" in results[0]["name"]
 
@@ -226,7 +195,6 @@ class TestParseCollectionWithFilter:
     """Testes para parse_collection com filtro F000 e extracao de variaveis."""
 
     def test_f000_removed(self, sample_collection, tmp_path):
-        """F000 nao deve aparecer na lista de requests."""
         f = tmp_path / "col.json"
         f.write_text(json.dumps(sample_collection))
         result = parse_collection(str(f))
@@ -235,7 +203,6 @@ class TestParseCollectionWithFilter:
         assert len(result["requests"]) == 1
 
     def test_variables_preserved(self, sample_collection, tmp_path):
-        """Variaveis da collection devem ser preservadas."""
         f = tmp_path / "col.json"
         f.write_text(json.dumps(sample_collection))
         result = parse_collection(str(f))
@@ -248,14 +215,12 @@ class TestLoadCollection:
     """Testes para a funcao load_collection."""
 
     def test_load_collection_success(self):
-        """Deve carregar o arquivo JSON corretamente."""
         mock_data = '{"info": {"name": "Test"}, "item": []}'
         with patch("builtins.open", mock_open(read_data=mock_data)):
             result = load_collection("fake_file.json")
             assert result["info"]["name"] == "Test"
 
     def test_load_collection_invalid_json(self):
-        """Deve levantar erro com JSON invalido."""
         with patch("builtins.open", mock_open(read_data="invalid json")):
             with pytest.raises(json.JSONDecodeError):
                 load_collection("fake_file.json")
@@ -267,17 +232,14 @@ class TestExtractVariables:
     """Testes para a funcao extract_variables."""
 
     def test_extract_variables_success(self, sample_collection):
-        """Deve extrair todas as variaveis da collection."""
         result = extract_variables(sample_collection)
         assert result["client_id_og"] == "883b0194-10a8-451e-bb38-1e61828c6f8b"
 
     def test_extract_variables_empty(self):
-        """Deve retornar dicionario vazio sem variaveis."""
         result = extract_variables({"variable": []})
         assert result == {}
 
     def test_extract_variables_missing_value(self):
-        """Deve usar string vazia quando value esta faltando."""
         c = {"variable": [{"key": "myVar"}]}
         result = extract_variables(c)
         assert result["myVar"] == ""
@@ -415,28 +377,6 @@ class TestExtractAuth:
         request = {}
         result = extract_auth(request)
         assert result is None
-
-
-# --- Tests: is_request_disabled ---
-
-class TestIsRequestDisabled:
-    """Testes para a funcao is_request_disabled."""
-
-    def test_request_disabled_flag(self):
-        item = {"disabled": True, "request": {"method": "GET"}}
-        assert is_request_disabled(item) is True
-
-    def test_request_not_disabled(self):
-        item = {"request": {"method": "GET"}}
-        assert is_request_disabled(item) is False
-
-    def test_request_with_disabled_param(self):
-        item = {"request": {"url": {"query": [{"key": "p1", "value": "v1"}, {"key": "p2", "value": "v2", "disabled": True}]}}}
-        assert is_request_disabled(item) is True
-
-    def test_request_with_all_params_enabled(self):
-        item = {"request": {"url": {"query": [{"key": "p1", "value": "v1"}, {"key": "p2", "value": "v2"}]}}}
-        assert is_request_disabled(item) is False
 
 
 # --- Tests: parse_request ---

@@ -5,9 +5,7 @@ Responsável por:
 - Navegar recursivamente pela estrutura aninhada (pastas e subpastas)
 - Extrair: nome do grupo, nome do teste, método, URL, headers, body, auth
 - Resolver {{variaveis}} com valores do array variable[]
-- Marcar requests com disabled: true para skip
-- Ignorar grupos de autenticao (F000, Autenticacao)
-- Extrair catalogo de variaveis e keywords do base-api.robot
+- Ignorar grupos de autenticacao (F000, Autenticacao)
 """
 
 import json
@@ -100,17 +98,6 @@ def extract_auth(request):
     return auth.get("type")
 
 
-def is_request_disabled(item):
-    """Verifica se o request esta desabilitado."""
-    if item.get("disabled", False):
-        return True
-    url_obj = item.get("request", {}).get("url", {})
-    for param in url_obj.get("query", []):
-        if param.get("disabled", False):
-            return True
-    return False
-
-
 def is_auth_group(group_name):
     """Verifica se o nome do grupo indica um grupo de autenticacao.
 
@@ -135,49 +122,6 @@ def should_skip_group(group_name):
     return is_auth_group(group_name)
 
 
-def extract_baseapi_catalog(baseapi_file):
-    """Extrai variaveis e keywords do arquivo base-api.robot.
-
-    Retorna um dicionario com:
-      - variables: set de nomes de variaveis definidas
-      - keywords: set de nomes de keywords definidas
-      - lists: set de nomes de listas (@{...})
-    """
-    catalog = {
-        "variables": set(),
-        "keywords": set(),
-        "lists": set(),
-    }
-
-    if not baseapi_file or not os.path.exists(baseapi_file):
-        return catalog
-
-    with open(baseapi_file, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    # Extrai variaveis: ${nome_var}
-    for match in re.finditer(r'^\s*\$\{(\w+)\}\s+', content, re.MULTILINE):
-        catalog["variables"].add(match.group(1))
-
-    # Extrai listas: @{nome_lista}
-    for match in re.finditer(r'^\s*@\{(\w+)\}\s+', content, re.MULTILINE):
-        catalog["lists"].add(match.group(1))
-
-    # Extrai keywords: nomes de keywords (sem indentacao, antes de *** ou [Arguments])
-    in_keywords = False
-    for line in content.splitlines():
-        stripped = line.strip()
-        if stripped == "*** Keywords ***":
-            in_keywords = True
-            continue
-        if in_keywords and stripped.startswith("*** "):
-            break
-        if in_keywords and stripped and not stripped.startswith("#") and not stripped.startswith("[") and not stripped.startswith("    ") and not stripped.startswith("${") and not stripped.startswith("@{") and "    " not in stripped:
-            catalog["keywords"].add(stripped)
-
-    return catalog
-
-
 def parse_request(item, group_path, variables):
     """Parseia um request (item folha) e retorna um dicionario com todos os dados."""
     request = item.get("request", {})
@@ -188,7 +132,6 @@ def parse_request(item, group_path, variables):
     headers = extract_headers(request.get("header", []), variables)
     body = extract_body(request)
     auth = extract_auth(request)
-    disabled = is_request_disabled(item) or is_request_disabled(item)
 
     events = []
     for event in item.get("event", []):
@@ -208,7 +151,6 @@ def parse_request(item, group_path, variables):
         "headers": headers,
         "body": body,
         "auth": auth,
-        "disabled": disabled,
         "events": events,
     }
 
@@ -224,43 +166,30 @@ def parse_collection_items(items, group_path, variables, results):
         item_name = item.get("name", "Sem nome")
         current_path = f"{group_path} / {item_name}" if group_path else item_name
 
-        # Se tem filhos, eh uma pasta
         if "item" in item and item["item"]:
-            # Verifica se esta pasta ou alguma ancestral eh de auth
-            # So entra recursivamente se nao for grupo de auth
             if not should_skip_group(item_name):
                 parse_collection_items(item["item"], current_path, variables, results)
-        # Se tem request, eh um teste
         elif "request" in item:
-            # Nao adiciona se o grupo atual for de auth
             if not should_skip_group(item_name) and not any(should_skip_group(p) for p in current_path.split(" / ")):
                 request_data = parse_request(item, current_path, variables)
                 results.append(request_data)
 
 
-def parse_collection(input_file, baseapi_file=None):
+def parse_collection(input_file):
     """Funcao principal: le o JSON e retorna todos os dados da collection.
 
     Args:
         input_file: caminho para o arquivo da collection Postman
-        baseapi_file: (opcional) caminho para base-api.robot
 
     Retorna um dicionario com:
       - collection_name: nome da collection
       - variables: dicionario de variaveis resolvidas
-      - baseapi_variables: set de variaveis do base-api.robot
-      - baseapi_keywords: set de keywords do base-api.robot
-      - baseapi_lists: set de listas do base-api.robot
       - requests: lista de requests parseados
-      - skip_groups: lista de grupos ignorados
     """
     collection = load_collection(input_file)
     variables = extract_variables(collection)
 
     collection_name = collection.get("info", {}).get("name", "Sem nome")
-
-    # Extrai catalogo do base-api.robot
-    catalog = extract_baseapi_catalog(baseapi_file)
 
     results = []
     top_level_items = collection.get("item", [])
@@ -269,11 +198,5 @@ def parse_collection(input_file, baseapi_file=None):
     return {
         "collection_name": collection_name,
         "variables": variables,
-        "baseapi_variables": catalog["variables"],
-        "baseapi_keywords": catalog["keywords"],
-        "baseapi_lists": catalog["lists"],
         "requests": results,
     }
-
-
-import os
