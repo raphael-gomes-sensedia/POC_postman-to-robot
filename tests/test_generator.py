@@ -4,9 +4,11 @@ Abrange:
 - is_error_status
 - generate_robot (com separacao sucesso/erro)
 - Utilitarios: file name, status code, group
+- Integracao com manifest (geracao de .manifest.json sidecar)
 """
 
 import os
+import json
 import pytest
 from service.generator import (
     get_top_level_group,
@@ -162,6 +164,8 @@ class TestGenerateRobotComSeparacao:
     def test_success_file_has_sections(self, sample_data, tmp_path):
         files = generate_robot(sample_data, str(tmp_path))
         for f in files:
+            if not f.endswith(".robot"):
+                continue
             if "neg-" not in os.path.basename(f):
                 with open(f, encoding="utf-8") as fh:
                     content = fh.read()
@@ -210,3 +214,49 @@ class TestExtractStatusCode:
 
     def test_no_status_code(self):
         assert extract_status_code("GET /pedidos Sucesso") is None
+
+
+# --- Tests: integracao manifest ---
+
+class TestManifestIntegracao:
+    """Testes para a integracao do manifest JSON sidecar no generate_robot."""
+
+    def test_deve_gerar_manifest_json_junto_com_robot(self, sample_data, tmp_path):
+        """Deve gerar um arquivo .manifest.json ao lado de cada .robot."""
+        files = generate_robot(sample_data, str(tmp_path))
+
+        manifest_files = [f for f in files if f.endswith(".manifest.json")]
+        assert len(manifest_files) > 0
+
+    def test_deve_retornar_arquivos_robot_e_manifest(self, sample_data, tmp_path):
+        """Deve retornar tanto arquivos .robot quanto .manifest.json na lista."""
+        files = generate_robot(sample_data, str(tmp_path))
+
+        robot_files = [f for f in files if f.endswith(".robot")]
+        manifest_files = [f for f in files if f.endswith(".manifest.json")]
+        assert len(robot_files) > 0
+        assert len(manifest_files) > 0
+
+    def test_manifest_deve_conter_file_name_correspondente(self, sample_data, tmp_path):
+        """Deve conter file_name correspondente ao arquivo .robot no manifest."""
+        files = generate_robot(sample_data, str(tmp_path))
+
+        manifest_files = [f for f in files if f.endswith(".manifest.json")]
+        robot_files = [f for f in files if f.endswith(".robot")]
+
+        for robot_file in robot_files:
+            robot_name = os.path.basename(robot_file)
+            expected_manifest = robot_name.replace(".robot", ".manifest.json")
+            manifest_match = [m for m in manifest_files if os.path.basename(m) == expected_manifest]
+            assert len(manifest_match) == 1, f"Manifest nao encontrado para {robot_name}"
+
+    def test_manifest_gerado_deve_ser_json_valido(self, sample_data, tmp_path):
+        """Deve gerar um manifest JSON valido (parseavel)."""
+        files = generate_robot(sample_data, str(tmp_path))
+
+        manifest_files = [f for f in files if f.endswith(".manifest.json")]
+        for mf in manifest_files:
+            with open(mf, encoding="utf-8") as f:
+                manifest = json.load(f)
+            assert "file_name" in manifest
+            assert "test_cases" in manifest

@@ -11,6 +11,8 @@ import os
 import re
 import unicodedata
 
+from service.manifest import generate_manifest_file
+
 
 def get_top_level_group(group_path):
     """Extrai o grupo de primeiro nivel do caminho completo."""
@@ -132,17 +134,7 @@ def generate_variables(collection_variables):
 
 def generate_robot_file(requests, collection_name, variables, tipo, file_name, api_slug):
     """Gera o esqueleto de um arquivo .robot.
-
-    Args:
-        requests: requests do grupo
-        collection_name: nome da collection
-        variables: variaveis da collection
-        tipo: "sucesso" ou "erro"
-        file_name: nome do arquivo
-        api_slug: slug da API para o comando de execucao
-
-    Returns:
-        String com o conteudo do arquivo.
+    
     """
     sections = []
 
@@ -166,7 +158,7 @@ def generate_robot_file(requests, collection_name, variables, tipo, file_name, a
     return "\n".join(sections) + "\n"
 
 
-def generate_robot(data, output_dir):
+def generate_robot(data, output_dir, base_api_path=None):
     """Gera os arquivos .robot (esqueleto) a partir dos dados parseados.
 
     Cria uma subpasta com o nome da API dentro de output_dir.
@@ -174,12 +166,10 @@ def generate_robot(data, output_dir):
       - {grupo}.robot (apenas testes de sucesso)
       - neg-{grupo}.robot (apenas testes de erro)
 
-    Args:
-        data: dicionario retornado por parse_collection
-        output_dir: diretorio de saida
+    Para cada arquivo .robot gerado, tambem gera um arquivo .manifest.json
+    sidecar com os dados estruturados das requests, assertions traduzidas e
+    mapeamentos sugeridos de @{api_*} e ${oper_*}.
 
-    Returns:
-        Lista de caminhos dos arquivos gerados.
     """
     collection_name = data.get("collection_name", "Sem nome")
     variables = data.get("variables", {})
@@ -187,6 +177,13 @@ def generate_robot(data, output_dir):
 
     if not requests:
         return []
+
+    # Caminho padrao do base-api.robot se nao fornecido
+    if base_api_path is None:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        base_api_path = os.path.join(
+            project_root, ".opencode", "context", "resource", "base-api.robot"
+        )
 
     api_slug = generate_api_slug(collection_name)
     output_dir = os.path.join(output_dir, api_slug)
@@ -221,6 +218,19 @@ def generate_robot(data, output_dir):
             files_created.append(file_path)
             print(f"Esqueleto gerado: {file_path} ({len(success_reqs)} testes de sucesso)")
 
+            # Gera o manifest JSON sidecar
+            manifest_path = generate_manifest_file(
+                requests=success_reqs,
+                collection_name=collection_name,
+                variables=variables,
+                tipo="sucesso",
+                file_name=file_name,
+                api_slug=api_slug,
+                base_api_path=base_api_path,
+                output_dir=output_dir,
+            )
+            files_created.append(manifest_path)
+
         if error_reqs:
             file_name = generate_file_name(group_name, prefix="neg-")
             file_path = os.path.join(output_dir, file_name)
@@ -235,5 +245,18 @@ def generate_robot(data, output_dir):
 
             files_created.append(file_path)
             print(f"Esqueleto gerado: {file_path} ({len(error_reqs)} testes de erro)")
+
+            # Gera o manifest JSON sidecar
+            manifest_path = generate_manifest_file(
+                requests=error_reqs,
+                collection_name=collection_name,
+                variables=variables,
+                tipo="erro",
+                file_name=file_name,
+                api_slug=api_slug,
+                base_api_path=base_api_path,
+                output_dir=output_dir,
+            )
+            files_created.append(manifest_path)
 
     return files_created
